@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Inceptum.Cqrs</id>
+    <version>$version$</version>
+    <title>Inceptum.Cqrs</title>
+    <authors>InceptumSoft</authors>
+    <owners>InceptumSoft</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Inceptum.Cqrs</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2013</copyright>
+    <tags></tags>
+	<dependencies>
+        <dependency id="Inceptum.Messaging" version="$version$" />
+        <dependency id="NEventStore" version="[4.1.0.10, 5.0.0.0)" />
+    </dependencies>  
+  </metadata>
+</package>
