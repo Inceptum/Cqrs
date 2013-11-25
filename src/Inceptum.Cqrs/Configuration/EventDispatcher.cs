@@ -89,7 +89,9 @@ namespace Inceptum.Cqrs.Configuration
                 throw new ArgumentNullException("event");
             }
             if (!m_Handlers.TryGetValue(@event.GetType(), out list))
-                return;
+            {
+                acknowledge(0, true);
+            }
 
 
             foreach (var handler in list)
