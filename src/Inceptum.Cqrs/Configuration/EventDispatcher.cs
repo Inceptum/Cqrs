@@ -91,6 +91,7 @@ namespace Inceptum.Cqrs.Configuration
             if (!m_Handlers.TryGetValue(@event.GetType(), out list))
             {
                 acknowledge(0, true);
+                return;
             }
 
 
