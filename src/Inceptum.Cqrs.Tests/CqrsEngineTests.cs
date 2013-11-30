@@ -14,6 +14,7 @@ using EventStore.ClientAPI;
 using EventStore.ClientAPI.SystemData;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Messaging;
+using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.RabbitMq;
 using Inceptum.Messaging.Serialization;
@@ -199,9 +200,9 @@ namespace Inceptum.Cqrs.Tests
                                                                       .WithCommandsHandler(commandHandler))
                     )
                 {
-                    messagingEngine.Send("test1", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("test2", new Endpoint("InMemory", "exchange2", serializationFormat: "json"));
-                    messagingEngine.Send("test3", new Endpoint("InMemory", "exchange3", serializationFormat: "json"));
+                    messagingEngine.Send("test1", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("test2", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("test3", new Endpoint("InMemory", "bc.exchange3", serializationFormat: "json"));
                     Thread.Sleep(2000);
                     Assert.That(commandHandler.AcceptedCommands, Is.EquivalentTo(new[] { "test1", "test2" }));
                 }
@@ -267,17 +268,17 @@ namespace Inceptum.Cqrs.Tests
                                                                       .WithCommandsHandler(commandHandler))
                     )
                 {
-                    messagingEngine.Send("low1", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low2", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low3", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low4", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low5", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low6", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low7", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low8", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low9", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low10", new Endpoint("InMemory", "exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("high", new Endpoint("InMemory", "exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low1", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low2", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low3", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low4", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low5", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low6", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low7", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low8", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low9", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("low10", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
+                    messagingEngine.Send("high", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
                     Thread.Sleep(2000);
                     Console.WriteLine(string.Join("\n", commandHandler.AcceptedCommands));
                     Assert.That(commandHandler.AcceptedCommands.Take(2).Any(c => (string)c == "high"), Is.True);
@@ -307,20 +308,20 @@ namespace Inceptum.Cqrs.Tests
 
 
                 var cqrsEngine = new CqrsEngine(messagingEngine, new FakeEndpointResolver(),
-                                                LocalBoundedContext.Named("integration")
-                                                                   .PublishingEvents(typeof (int))
-                                                                   .To("eventExchange")
-                                                                   .RoutedTo("eventQueue")
-                                                                   .ListeningCommands(typeof (string))
-                                                                   .On("commandExchange")
-                                                                   .RoutedFrom("commandQueue")
-                                                                   .WithCommandsHandler<CommandsHandler>(),
-                                                LocalBoundedContext.Named("bc")
-                                                                   .WithProjection<EventListener>("integration")
-
-                                                   
-                    //.ListeningCommands(typeof(string)).locally()
+                    LocalBoundedContext.Named("integration")
+                        .PublishingEvents(typeof (int)).To("eventExchange").RoutedTo("eventQueue")
+                        .ListeningCommands(typeof (string)).On("commandExchange").RoutedFrom("commandQueue")
+                        .WithCommandsHandler<CommandsHandler>(),
+                    LocalBoundedContext.Named("bc").WithProjection<EventListener>("integration")
                     );
+
+/*                var cqrsEngine = new CqrsEngine(messagingEngine, new RmqConventionEndpointResolver("test","json",new EndpointResolver(new Dictionary<string, Endpoint>())),
+                                                LocalBoundedContext.Named("integration")
+                                                                   .PublishingEvents(typeof (int)).To("events").RoutedToSameEndpoint()
+                                                                   .ListeningCommands(typeof (string)).On("commands").RoutedFromSameEndpoint()
+                                                                   .WithCommandsHandler<CommandsHandler>(),
+                                                LocalBoundedContext.Named("bc").WithProjection<EventListener>("integration")
+                    );*/
                 /* var c=new commandSender(messagingEngine, RemoteBoundedContext.Named("integration")
                                                     .ListeningCommands(typeof(TestCommand)).On(new Endpoint())
                                                     .PublishingEvents(typeof(TransferCreatedEvent)).To(new Endpoint()),
@@ -522,8 +523,8 @@ namespace Inceptum.Cqrs.Tests
         public void ReplayEventsRmqTest()
         {
             var endpointResolver = MockRepository.GenerateMock<IEndpointResolver>();
-            endpointResolver.Expect(r => r.Resolve("commands")).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("events")).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local","commands")).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "events")).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
 
 
             var transports = new Dictionary<string, TransportInfo> { { "rmq", new TransportInfo("localhost", "guest", "guest", null, "RabbitMq") } };

@@ -4,6 +4,6 @@ namespace Inceptum.Cqrs
 {
     public interface IEndpointResolver
     {
-        Endpoint Resolve(string endpoint);
+        Endpoint Resolve(string boundedContext, string endpoint);
     }
 }
