@@ -44,6 +44,7 @@ namespace Inceptum.Cqrs
         }
         private readonly IRegistration[] m_Registrations;
         private readonly IDependencyResolver m_DependencyResolver;
+        private bool m_CreateMissingEndpoints = false;
 
         protected IMessagingEngine MessagingEngine
         {
@@ -51,13 +52,13 @@ namespace Inceptum.Cqrs
         }
 
 
-        public CqrsEngine(IMessagingEngine messagingEngine,
-                          IEndpointResolver endpointResolver, params IRegistration[] registrations)
+        public CqrsEngine(IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, params IRegistration[] registrations)
             :this(new DefaultDependencyResolver(), messagingEngine, endpointResolver, registrations)
         {
         }
 
-        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, params IRegistration[] registrations)
+        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver,
+            params IRegistration[] registrations)
         {
             m_DependencyResolver = dependencyResolver;
             m_Registrations = registrations;
@@ -151,14 +152,14 @@ namespace Inceptum.Cqrs
                 bool result = isValid;
 
                 if (publishEndpoints.Contains(endpointName) &&
-                    !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Publish, true, out error))
+                    !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Publish, m_CreateMissingEndpoints, out error))
                 {
                     errorMessage.AppendFormat("Bounded context '{0}' endpoint '{1}'({2}) is not properly configured for publishing: {3}.",boundedContext.Name, endpointName, endpoint, error).AppendLine();
                     result = false;
                 }
 
                 if (subscribeEndpoints.Contains(endpointName) &&
-                    !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, true, out error))
+                    !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, m_CreateMissingEndpoints, out error))
                 {
                     errorMessage.AppendFormat("Bounded context '{0}' endpoint '{1}'({2}) is not properly configured for subscription: {3}.", boundedContext.Name, endpointName, endpoint, error).AppendLine();
                     result = false;
