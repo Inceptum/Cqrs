@@ -68,10 +68,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\protobuf-net.2.0.0.640\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
-    <Reference Include="RabbitMQ.Client, Version=3.1.1.0, Culture=neutral, PublicKeyToken=89e7d7c5feba84ce, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RabbitMQ.Client.3.1.1\lib\net30\RabbitMQ.Client.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -139,6 +135,7 @@
     <Compile Include="InMemoryEndpointResolver.cs" />
     <Compile Include="Configuration\OptionalParameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RmqConventionEndpointResolver.cs" />
     <Compile Include="Utils\CurrentThreadTaskScheduler.cs" />
     <Compile Include="Utils\QueuedTaskScheduler.cs" />
   </ItemGroup>
