@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Castle.Components.DictionaryAdapter.Xml;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
@@ -82,11 +84,12 @@ namespace Inceptum.Cqrs
                 boundedContext.Processes.ForEach(p => p.Start(this, boundedContext.EventsPublisher));
             }
 
+            ensureEndpoints();
             foreach (var boundedContext in BoundedContexts)
             {
                 foreach (var eventsSubscription in boundedContext.EventsSubscriptions)
                 {
-                    var endpoint = m_EndpointResolver.Resolve(eventsSubscription.Key);
+                    var endpoint = m_EndpointResolver.Resolve(boundedContext.Name,eventsSubscription.Key);
                     BoundedContext context = boundedContext;
                     m_Subscription.Add(m_MessagingEngine.Subscribe(
                         endpoint,
@@ -105,7 +108,7 @@ namespace Inceptum.Cqrs
             {
                 foreach (var commandsSubscription in boundedContext.CommandsSubscriptions)
                 {
-                    var endpoint = m_EndpointResolver.Resolve(commandsSubscription.Endpoint);
+                    var endpoint = m_EndpointResolver.Resolve(boundedContext.Name, commandsSubscription.Endpoint);
                     BoundedContext context = boundedContext;
                     CommandSubscription commandSubscription = commandsSubscription;
                     m_Subscription.Add(m_MessagingEngine.Subscribe(
@@ -120,6 +123,48 @@ namespace Inceptum.Cqrs
                 }
             }
 
+        }
+
+        private void ensureEndpoints()
+        {
+            var allEndpointsAreValid = true;
+            var errorMessage=new StringBuilder("Some endpoints are not valid:").AppendLine();
+
+            foreach (var boundedContext in BoundedContexts)
+            {
+                allEndpointsAreValid = 
+                    allEndpointsAreValid &&
+                    verifyEndpoints(boundedContext, boundedContext.EventRoutes.Values, boundedContext.EventsSubscriptions.Keys, errorMessage) &&
+                    verifyEndpoints(boundedContext, boundedContext.CommandRoutes.Values, boundedContext.CommandsSubscriptions.Select(subscription => subscription.Endpoint), errorMessage);
+            }
+            if (!allEndpointsAreValid)
+                throw new ConfigurationErrorsException(errorMessage.ToString());
+        }
+
+        private bool verifyEndpoints(BoundedContext boundedContext, IEnumerable<string> publishEndpoints, IEnumerable<string> subscribeEndpoints, StringBuilder errorMessage)
+        {
+            var endpoints = publishEndpoints.Union(subscribeEndpoints);
+            return endpoints.Aggregate(true, (isValid, endpointName) =>
+            {
+                var endpoint = m_EndpointResolver.Resolve(boundedContext.Name, endpointName);
+                string error;
+                bool result = isValid;
+
+                if (publishEndpoints.Contains(endpointName) &&
+                    !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Publish, true, out error))
+                {
+                    errorMessage.AppendFormat("Bounded context '{0}' endpoint '{1}'({2}) is not properly configured for publishing: {3}.",boundedContext.Name, endpointName, endpoint, error).AppendLine();
+                    result = false;
+                }
+
+                if (subscribeEndpoints.Contains(endpointName) &&
+                    !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, true, out error))
+                {
+                    errorMessage.AppendFormat("Bounded context '{0}' endpoint '{1}'({2}) is not properly configured for subscription: {3}.", boundedContext.Name, endpointName, endpoint, error).AppendLine();
+                    result = false;
+                }
+                return result;
+            });
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -163,7 +208,7 @@ namespace Inceptum.Cqrs
             {
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}",boundedContext,typeof(T),priority));
             }
-            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(endpoint));
+            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(boundedContext, endpoint));
         }
 
         public void ReplayEvents(string boundedContext, params Type[] types)
@@ -177,7 +222,7 @@ namespace Inceptum.Cqrs
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}", boundedContext, typeof(ReplayEventsCommand), CommandPriority.Normal));
             }
 
-            var ep = m_EndpointResolver.Resolve(endpoint);
+            var ep = m_EndpointResolver.Resolve(boundedContext, endpoint);
 
             Destination tmpDestination;
             if (context.GetTempDestination(ep.TransportId, () => m_MessagingEngine.CreateTemporaryDestination(ep.TransportId,"EventReplay"), out tmpDestination))
@@ -194,9 +239,9 @@ namespace Inceptum.Cqrs
             SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = DateTime.MinValue, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext);
         }
 
-        internal void PublishEvent(object @event,string endpoint)
+        internal void PublishEvent(object @event,string boundedContext,string endpoint)
         {
-            PublishEvent(@event, m_EndpointResolver.Resolve(endpoint));
+            PublishEvent(@event, m_EndpointResolver.Resolve(boundedContext,endpoint));
         }
 
         internal void PublishEvent(object @event,Endpoint endpoint)

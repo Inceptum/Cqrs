@@ -22,7 +22,7 @@ namespace Inceptum.Cqrs
             {
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support event '{1}'", m_BoundedContext.Name, @event.GetType()));
             }
-            m_CqrsEngine.PublishEvent(@event,endpoint);
+            m_CqrsEngine.PublishEvent(@event, m_BoundedContext.Name, endpoint);
         }
  
     }

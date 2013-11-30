@@ -104,7 +104,7 @@ namespace Inceptum.Cqrs.Configuration
                 }
                 catch (Exception e)
                 {
-                    m_Logger.WarnException("Failed to handle command of type " + @event.GetType().Name, e);
+                    m_Logger.WarnException("Failed to handle event of type " + @event.GetType().Name, e);
                     result = new CommandHandlingResult {Retry = true, RetryDelay = m_FailedEventRetryDelay};
                 }
 
