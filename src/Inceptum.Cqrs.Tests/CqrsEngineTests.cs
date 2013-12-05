@@ -303,6 +303,8 @@ namespace Inceptum.Cqrs.Tests
                 {
                     Logger = new ConsoleLogger(LoggerLevel.Debug)
                 };
+
+
             using (messagingEngine)
             {
 
