@@ -5,14 +5,14 @@ using Inceptum.Messaging.Contract;
 
 namespace Inceptum.Cqrs
 {
-    public class RmqConventionEndpointResolver : IEndpointResolver
+    public class RabbitMqConventionEndpointResolver : IEndpointResolver
     {
         readonly Dictionary<Tuple<string,string>,Endpoint> m_Cache=new  Dictionary<Tuple<string, string>, Endpoint>();
         private readonly IEndpointProvider m_EndpointProvider;
         private string m_Transport;
         private string m_SerializationFormat;
 
-        public RmqConventionEndpointResolver(string transport,string serializationFormat,IEndpointProvider endpointProvider)
+        public RabbitMqConventionEndpointResolver(string transport,string serializationFormat,IEndpointProvider endpointProvider)
         {
             m_Transport = transport;
             m_EndpointProvider = endpointProvider;
