@@ -315,7 +315,7 @@ namespace Inceptum.Cqrs.Tests
                     LocalBoundedContext.Named("bc").WithProjection<EventListener>("integration")
                     );
 
-/*                var cqrsEngine = new CqrsEngine(messagingEngine, new RmqConventionEndpointResolver("test","json",new EndpointResolver(new Dictionary<string, Endpoint>())),
+/*                var cqrsEngine = new CqrsEngine(messagingEngine, new RabbitMqConventionEndpointResolver("test","json",new EndpointResolver(new Dictionary<string, Endpoint>())),
                                                 LocalBoundedContext.Named("integration")
                                                                    .PublishingEvents(typeof (int)).To("events").RoutedToSameEndpoint()
                                                                    .ListeningCommands(typeof (string)).On("commands").RoutedFromSameEndpoint()

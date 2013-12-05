@@ -135,7 +135,7 @@
     <Compile Include="InMemoryEndpointResolver.cs" />
     <Compile Include="Configuration\OptionalParameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RmqConventionEndpointResolver.cs" />
+    <Compile Include="RabbitMqConventionEndpointResolver.cs" />
     <Compile Include="Utils\CurrentThreadTaskScheduler.cs" />
     <Compile Include="Utils\QueuedTaskScheduler.cs" />
   </ItemGroup>
