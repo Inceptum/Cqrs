@@ -1,13 +1,15 @@
-﻿using Inceptum.Cqrs.Configuration;
+﻿using System;
+using Inceptum.Cqrs.Configuration;
 using Inceptum.Messaging.Contract;
 
 namespace Inceptum.Cqrs
 {
     internal class InMemoryEndpointResolver:IEndpointResolver
     {
-        public Endpoint Resolve(string boundedContext, string endpoint)
+        public Endpoint Resolve(string boundedContext, string endpoint, Type type, MessageType messageType)
         {
             return new Endpoint("InMemory", boundedContext+"."+endpoint, true, "json");
         }
+         
     }
 }

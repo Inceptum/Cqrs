@@ -124,7 +124,6 @@
     <Compile Include="Configuration\ProjectionDescriptor.cs" />
     <Compile Include="Configuration\RemoteBoundedContext.cs" />
     <Compile Include="Configuration\RemoteBoundedContextRegistration.cs" />
-    <Compile Include="Configuration\RoutingDescriptor.cs" />
     <Compile Include="Configuration\SagaRegistration.cs" />
     <Compile Include="Configuration\SubscriptionDescriptor.cs" />
     <Compile Include="CqrsEngine.cs" />
