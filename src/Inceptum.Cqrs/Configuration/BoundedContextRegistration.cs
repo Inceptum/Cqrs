@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using Inceptum.Cqrs.InfrastructureCommands;
+using Inceptum.Messaging.Contract;
 
 namespace Inceptum.Cqrs.Configuration
 {
@@ -25,11 +26,12 @@ namespace Inceptum.Cqrs.Configuration
 
     public class BoundedContextRegistration : IRegistration
     {
-        readonly Dictionary<Type, string> m_EventsSubscriptions = new Dictionary<Type, string>();
-        readonly List<CommandSubscription> m_CommandsSubscriptions = new List<CommandSubscription>();
         readonly List<IBoundedContextDescriptor> m_Configurators = new List<IBoundedContextDescriptor>();
         readonly Dictionary<Tuple<Type, CommandPriority>, string> m_CommandRoutes = new Dictionary<Tuple<Type, CommandPriority>, string>();
         readonly Dictionary<Type, string> m_EventRoutes=new Dictionary<Type, string>();
+
+        List<MessageRoute> m_MessageRoutes = new List<MessageRoute>();
+
 
         Type[] m_Dependencies=new Type[0];
         private readonly string m_Name;
@@ -56,8 +58,7 @@ namespace Inceptum.Cqrs.Configuration
             ThreadCount = 4;
             FailedCommandRetryDelayInternal = 60000;
             m_Name = name;
-            AddDescriptor(new SubscriptionDescriptor(m_EventsSubscriptions, m_CommandsSubscriptions));
-            AddDescriptor(new RoutingDescriptor(m_EventRoutes, m_CommandRoutes));
+            AddDescriptor(new SubscriptionDescriptor( m_MessageRoutes));
         }
 
         protected void AddDescriptor(IBoundedContextDescriptor descriptor)
@@ -90,53 +91,72 @@ namespace Inceptum.Cqrs.Configuration
 
         internal void AddSubscribedEvents(IEnumerable<Type> types, string endpoint)
         {
-            foreach (var type in types)
+            m_MessageRoutes.AddRange(types.Select(type =>
             {
-                if (m_CommandsSubscriptions.Any(t=>t.Types.ContainsKey(type)))
-                    throw new ConfigurationErrorsException(string.Format("Can not register {0} as event in bound context {1}, it is already registered as command",type, m_Name));
-                if (m_CommandsSubscriptions.Any(t=>t.Endpoint==endpoint))
-                    throw new ConfigurationErrorsException(string.Format("Can not register endpoint '{0}' as event endpoint in bound context {1}, it is already registered as commands endpoint", endpoint, m_Name));
-                m_EventsSubscriptions.Add(type,endpoint);
-            }
+                if (m_MessageRoutes.Any(r => r.Type == type && r.Direction == EndpointUsage.Subscribe && r.MessageType == MessageType.Command))
+                    throw new ConfigurationErrorsException(
+                        string.Format("Can not register {0} as event in bound context {1}, it is already registered as command", type, m_Name));
+
+                return new MessageRoute
+                {
+                    Type = type,
+                    Route = endpoint,
+                    BoundedContext = Name,
+                    MessageType = MessageType.Event,
+                    Direction = EndpointUsage.Subscribe
+                };
+            }));
+
         }
 
         public void AddSubscribedCommands(IEnumerable<Type> types, string endpoint, CommandPriority priority)
         {
-            foreach (var type in types)
+            //todo[kn]: process priority
+            m_MessageRoutes.AddRange(types.Select(type =>
             {
-                if (m_EventsSubscriptions.ContainsKey(type))
-                    throw new ConfigurationErrorsException(string.Format("Can not register {0} as command in bound context {1}, it is already registered as event",type, m_Name));
-                if (m_EventsSubscriptions.ContainsValue(endpoint))
-                    throw new ConfigurationErrorsException(string.Format("Can not register endpoint '{0}' as events endpoint in bound context {1}, it is already registered as commands endpoint", endpoint, m_Name));
-                CommandSubscription commandSubscription = m_CommandsSubscriptions.FirstOrDefault(t => t.Endpoint == endpoint);
-                if (commandSubscription==null)
+                if (m_MessageRoutes.Any(r => r.Type == type && r.Direction == EndpointUsage.Subscribe && r.MessageType == MessageType.Event))
+                    throw new ConfigurationErrorsException(
+                        string.Format("Can not register {0} as command in bound context {1}, it is already registered as event", type, m_Name));
+                return new MessageRoute
                 {
-                    commandSubscription = new CommandSubscription { Endpoint = endpoint };
-                    m_CommandsSubscriptions.Add(commandSubscription);
-                }
-                commandSubscription.Types[type] = priority;
-            }
+                    Type = type,
+                    Route = endpoint,
+                    BoundedContext = Name,
+                    MessageType = MessageType.Command,
+                    Direction = EndpointUsage.Subscribe
+                };
+            }));
+
+ 
         }
 
         public void AddCommandsRoute(IEnumerable<Type> types, string endpoint, CommandPriority priority)
         {
-            foreach (var type in types)
+            //todo[kn]: process priority
+            m_MessageRoutes.AddRange(types.Select(e => new MessageRoute
             {
-                if (m_CommandRoutes.ContainsKey(Tuple.Create(type,priority)))
-                    throw new ConfigurationErrorsException(string.Format("Route for command '{0}' with priority {1} is already registered", type,priority));
-                m_CommandRoutes.Add(Tuple.Create(type, priority), endpoint); 
-            }
+                Type = e,
+                Route = endpoint,
+                BoundedContext = Name,
+                MessageType = MessageType.Command,
+                Direction = EndpointUsage.Publish
+            }));
+ 
         }
   
         
         public void AddEventsRoute(IEnumerable<Type> types, string endpoint)
         {
-            foreach (var type in types)
+            m_MessageRoutes.AddRange(types.Select(e => new MessageRoute
             {
-                if (m_EventRoutes.ContainsKey(type))
-                    throw new ConfigurationErrorsException(string.Format("Route for event '{0}' is already registered", type));
-                m_EventRoutes.Add(type, endpoint); 
-            }
+                Type = e,
+                Route = endpoint,
+                BoundedContext = Name,
+                MessageType = MessageType.Event,
+                Direction = EndpointUsage.Publish
+            }));
+
+      
         }
 
 

@@ -525,8 +525,8 @@ namespace Inceptum.Cqrs.Tests
         public void ReplayEventsRmqTest()
         {
             var endpointResolver = MockRepository.GenerateMock<IEndpointResolver>();
-            endpointResolver.Expect(r => r.Resolve("local","commands")).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("local", "events")).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local","commands",Arg<Type>.Is.Anything,MessageType.Command)).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "events", Arg<Type>.Is.Anything, MessageType.Event)).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
 
 
             var transports = new Dictionary<string, TransportInfo> { { "rmq", new TransportInfo("localhost", "guest", "guest", null, "RabbitMq") } };
@@ -602,7 +602,6 @@ namespace Inceptum.Cqrs.Tests
 
 
                     Thread.Sleep(2000);
-                    //engine.SendCommand(new ReplayEventsCommand { Destination = "events", From = DateTime.MinValue }, "local");
                     engine.ReplayEvents("local", types);
                     Thread.Sleep(2000);
                     Console.WriteLine("Disposing...");

@@ -6,13 +6,11 @@ namespace Inceptum.Cqrs.Configuration
 {
     class SubscriptionDescriptor : IBoundedContextDescriptor
     {
-        private readonly Dictionary<Type, string> m_EventsSubscriptions;
-        private readonly List<CommandSubscription> m_CommandsSubscriptions;
+        private List<MessageRoute> m_MessageRoutes;
 
-        public SubscriptionDescriptor(Dictionary<Type, string> eventsSubscriptions, List<CommandSubscription> commandsSubscriptions)
+        public SubscriptionDescriptor(List<MessageRoute> messageRoutes)
         {
-            m_CommandsSubscriptions = commandsSubscriptions;
-            m_EventsSubscriptions = eventsSubscriptions;
+            m_MessageRoutes = messageRoutes;
         }
         public IEnumerable<Type> GetDependencies()
         {
@@ -22,12 +20,7 @@ namespace Inceptum.Cqrs.Configuration
 
         public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            var eventSubscriptions = from pair in m_EventsSubscriptions
-                                     group pair by pair.Value
-                                         into grouping
-                                         select new { endpoint = grouping.Key, types = grouping.Select(g => g.Key) };
-            boundedContext.EventsSubscriptions = eventSubscriptions.ToDictionary(o => o.endpoint, o => o.types);
-            boundedContext.CommandsSubscriptions = m_CommandsSubscriptions;
+            boundedContext.MessageRoutes = m_MessageRoutes;
         }
 
         public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)

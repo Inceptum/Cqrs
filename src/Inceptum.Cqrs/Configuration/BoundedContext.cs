@@ -8,10 +8,6 @@ namespace Inceptum.Cqrs.Configuration
 {
     public class BoundedContext:IDisposable
     {
-        internal Dictionary<Type, string> EventRoutes { get; set; }
-        internal Dictionary<string, IEnumerable<Type>> EventsSubscriptions { get; set; }
-        internal List<CommandSubscription> CommandsSubscriptions { get; set; }
-        internal Dictionary<Tuple<Type, CommandPriority>, string> CommandRoutes { get; set; }
         internal EventsPublisher EventsPublisher { get; private set; }
         internal CommandDispatcher CommandDispatcher { get; private set; }
         internal EventDispatcher EventDispatcher { get; private set; }
@@ -22,6 +18,7 @@ namespace Inceptum.Cqrs.Configuration
         public string Name { get; set; }
         public int ThreadCount { get; set; }
         public long FailedCommandRetryDelay { get; set; }
+        internal List<MessageRoute> MessageRoutes { get; set; }
 
         internal BoundedContext(CqrsEngine cqrsEngine, string name, int threadCount, long failedCommandRetryDelay)
         {
