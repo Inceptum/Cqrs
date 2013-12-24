@@ -144,8 +144,8 @@ namespace Inceptum.Cqrs
                         (@event, acknowledge) => context.EventDispatcher.Dispacth(@event, acknowledge),
                         (type, acknowledge) =>
                         {
-                            throw new InvalidOperationException("Unknown event received: " + type);
-                            //acknowledge(0, true);
+                            m_Logger.Debug("Unknown event received: " + type);
+                            acknowledge(0, true);
                         },
                         subscribeEvent.Select(r => r.Type).ToArray()));
                 }
@@ -160,8 +160,8 @@ namespace Inceptum.Cqrs
                             context.CommandDispatcher.Dispatch(command, CommandPriority.Normal, acknowledge, endpoint),
                         (type, acknowledge) =>
                         {
-                            throw new InvalidOperationException("Unknown command received: " + type);
-                            //acknowledge(0, true);
+                            m_Logger.Debug("Unknown command received: " + type);
+                            acknowledge(0, true);
                         },
                         subscribeCommand.Select(r => r.Type).ToArray()));
                 }
