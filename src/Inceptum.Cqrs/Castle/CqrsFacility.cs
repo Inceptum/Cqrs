@@ -45,6 +45,7 @@ namespace Inceptum.Cqrs.Castle
         private BoundedContextRegistration[] m_BoundedContexts = new BoundedContextRegistration[0];
         private readonly List<SagaRegistration> m_Sagas = new List<SagaRegistration>();
         private bool m_InMemory=false;
+        private static bool m_CreateMissingEndpoints = false;
 
         public CqrsFacility RunInMemory()
         {
@@ -64,7 +65,12 @@ namespace Inceptum.Cqrs.Castle
             Kernel.ComponentRegistered += onComponentRegistered;
             Kernel.HandlersChanged += (ref bool changed) => processWaitList();
         }
- 
+
+        public CqrsFacility CreateMissingEndpoints(bool createMissingEndpoints = true)
+        {
+            m_CreateMissingEndpoints = createMissingEndpoints;
+            return this;
+        }
 
 
         private void processWaitList()
@@ -153,7 +159,7 @@ namespace Inceptum.Cqrs.Castle
         {
             var engineReg = m_InMemory
                 ? Component.For<ICqrsEngine>().ImplementedBy<InMemoryCqrsEngine>()
-                : Component.For<ICqrsEngine>().ImplementedBy<CqrsEngine>();
+                : Component.For<ICqrsEngine>().ImplementedBy<CqrsEngine>().DependsOn(new { createMissingEndpoints=m_CreateMissingEndpoints });
             Kernel.Register(Component.For<IDependencyResolver>().ImplementedBy<CastleDependencyResolver>());
             Kernel.Register(engineReg.Named(m_EngineComponetName).DependsOn(new
                 {
