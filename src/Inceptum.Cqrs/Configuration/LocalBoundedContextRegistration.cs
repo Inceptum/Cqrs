@@ -171,7 +171,12 @@ namespace Inceptum.Cqrs.Configuration
 
         public LocalBoundedContextRegistration RoutedFromSameEndpoint( )
         {
-            return RoutedFrom(m_ListenEndpoints.First().Key);
+            LocalBoundedContextRegistration registration=null;
+            foreach (var endpoint in m_ListenEndpoints)
+            {
+                registration = RoutedFrom(endpoint.Key,endpoint.Value);
+            }
+            return registration;
         }
 
         public LocalBoundedContextRegistration NotRouted()
