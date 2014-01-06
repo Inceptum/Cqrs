@@ -159,7 +159,7 @@ namespace Inceptum.Cqrs.Castle
         {
             var engineReg = m_InMemory
                 ? Component.For<ICqrsEngine>().ImplementedBy<InMemoryCqrsEngine>()
-                : Component.For<ICqrsEngine>().ImplementedBy<CqrsEngine>().DependsOn(new { createMissingEndpoints=m_CreateMissingEndpoints });
+                : Component.For<ICqrsEngine>().ImplementedBy<CqrsEngine>().DependsOn(new { createMissingEndpoints = m_CreateMissingEndpoints });
             Kernel.Register(Component.For<IDependencyResolver>().ImplementedBy<CastleDependencyResolver>());
             Kernel.Register(engineReg.Named(m_EngineComponetName).DependsOn(new
                 {
