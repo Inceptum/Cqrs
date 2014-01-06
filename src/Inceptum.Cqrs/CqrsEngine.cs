@@ -235,6 +235,7 @@ namespace Inceptum.Cqrs
                     (@event, acknowledge) => context.EventDispatcher.Dispacth(@event, acknowledge),
                     (typeName, acknowledge) => { }, 
                     "EventReplay",
+                    0,
                     knownEventTypes));
             }
             SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = DateTime.MinValue, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext);

@@ -299,10 +299,7 @@ namespace Inceptum.Cqrs.Tests
                     {
                         {"test", new TransportInfo("localhost", "guest", "guest", null, "RabbitMq")}
                     });
-            var messagingEngine = new MessagingEngine(transportResolver, new RabbitMqTransportFactory())
-                {
-                    Logger = new ConsoleLogger(LoggerLevel.Debug)
-                };
+            var messagingEngine = new MessagingEngine(transportResolver, new RabbitMqTransportFactory());
 
 
             using (messagingEngine)
@@ -530,10 +527,7 @@ namespace Inceptum.Cqrs.Tests
 
 
             var transports = new Dictionary<string, TransportInfo> { { "rmq", new TransportInfo("localhost", "guest", "guest", null, "RabbitMq") } };
-            var messagingEngine = new MessagingEngine(new TransportResolver(transports), new RabbitMqTransportFactory())
-            {
-                Logger = new ConsoleLogger()
-            };
+            var messagingEngine = new MessagingEngine(new TransportResolver(transports), new RabbitMqTransportFactory());
 
 
             var eventsListener = new EventsListener();
