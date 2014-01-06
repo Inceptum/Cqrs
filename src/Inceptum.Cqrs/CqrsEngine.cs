@@ -64,6 +64,7 @@ namespace Inceptum.Cqrs
 
         public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, bool createMissingEndpoints, params IRegistration[] registrations)
         {
+            m_Logger.Debug("CqrsEngine instanciating. createMissingEndpoints: "+ createMissingEndpoints);
             m_CreateMissingEndpoints = createMissingEndpoints;
             m_DependencyResolver = dependencyResolver;
             m_Registrations = registrations;
