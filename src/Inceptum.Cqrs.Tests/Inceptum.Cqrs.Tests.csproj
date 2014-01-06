@@ -47,13 +47,13 @@
     <Reference Include="EventStore.ClientAPI">
       <HintPath>..\packages\EventStore.Client.2.0.2\lib\net40\EventStore.ClientAPI.dll</HintPath>
     </Reference>
-    <Reference Include="Inceptum.Messaging, Version=1.0.7.1, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Inceptum.Messaging, Version=1.0.7.2, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Inceptum.Messaging.1.0.7.1\lib\net40\Inceptum.Messaging.dll</HintPath>
+      <HintPath>..\packages\Inceptum.Messaging.1.0.7.2\lib\net40\Inceptum.Messaging.dll</HintPath>
     </Reference>
-    <Reference Include="Inceptum.Messaging.RabbitMq, Version=1.0.7.1, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Inceptum.Messaging.RabbitMq, Version=1.0.7.2, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Inceptum.Messaging.RabbitMq.1.0.7.1\lib\net40\Inceptum.Messaging.RabbitMq.dll</HintPath>
+      <HintPath>..\packages\Inceptum.Messaging.RabbitMq.1.0.7.2\lib\net40\Inceptum.Messaging.RabbitMq.dll</HintPath>
     </Reference>
     <Reference Include="NEventStore, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
