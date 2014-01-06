@@ -44,7 +44,7 @@ namespace Inceptum.Cqrs
         }
         private readonly IRegistration[] m_Registrations;
         private readonly IDependencyResolver m_DependencyResolver;
-        private bool m_CreateMissingEndpoints = false;
+        private readonly bool m_CreateMissingEndpoints = false;
 
         protected IMessagingEngine MessagingEngine
         {
@@ -57,9 +57,14 @@ namespace Inceptum.Cqrs
         {
         }
 
-        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver,
-            params IRegistration[] registrations)
+        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine,IEndpointResolver endpointResolver, params IRegistration[] registrations)
+            :this(dependencyResolver, messagingEngine,endpointResolver, false, registrations)
         {
+        }
+
+        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, bool createMissingEndpoints, params IRegistration[] registrations)
+        {
+            m_CreateMissingEndpoints = createMissingEndpoints;
             m_DependencyResolver = dependencyResolver;
             m_Registrations = registrations;
             m_EndpointResolver = endpointResolver;
