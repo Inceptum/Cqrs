@@ -48,7 +48,7 @@ namespace Inceptum.Cqrs
             {
                 Destination = new Destination
                 {
-                    Publish = string.Format("topic://{0}.exchange/{1}", localBoundedContext, type.Name),
+                    Publish = string.Format("topic://{0}.exchange/{1}", remoteBoundedContext, type.Name),
                     Subscribe = string.Format("{0}.queue.{1}.{2}", localBoundedContext, remoteBoundedContext, endpoint)
                 },
                 SerializationFormat = m_SerializationFormat,
