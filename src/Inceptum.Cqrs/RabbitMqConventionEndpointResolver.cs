@@ -20,11 +20,11 @@ namespace Inceptum.Cqrs
         }
 
 
-        public Endpoint Resolve(string boundedContext, string endpoint, Type type)
+        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type)
         {
             lock (m_Cache)
             {
-                var key = Tuple.Create(boundedContext, endpoint);
+                var key = Tuple.Create(localBoundedContext, endpoint);
                 Endpoint ep;
                 if (m_Cache.TryGetValue(key, out ep)) return ep;
 
@@ -35,21 +35,21 @@ namespace Inceptum.Cqrs
                     return ep;
                 }
 
-                ep=createEndpoint(boundedContext, endpoint,type);
+                ep=createEndpoint(localBoundedContext, remoteBoundedContext,  endpoint,type);
                 m_Cache.Add(key,ep);
                 return ep;
             }
         }
 
-        private  Endpoint createEndpoint(string boundedContext, string endpoint,Type type)
+        private Endpoint createEndpoint(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type)
         {
             m_SerializationFormat = "protobuf";
             return new Endpoint
             {
                 Destination = new Destination
                 {
-                    Publish = string.Format("topic://{0}.Exchange/{1}", boundedContext, type.Name),
-                    Subscribe = string.Format("{0}.Queue.{1}", boundedContext, endpoint)
+                    Publish = string.Format("topic://{0}.E/{1}", localBoundedContext, type.Name),
+                    Subscribe = string.Format("{0}.Q.{1}.{2}", localBoundedContext, remoteBoundedContext, endpoint)
                 },
                 SerializationFormat = m_SerializationFormat,
                 SharedDestination = true,

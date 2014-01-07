@@ -34,6 +34,7 @@ namespace Inceptum.Cqrs.Configuration
         Type[] m_Dependencies=new Type[0];
         private readonly string m_Name;
         private readonly bool m_IsLocal;
+        private string m_LocalBoundedContext;
 
         public IEnumerable<Type> Dependencies
         {
@@ -52,8 +53,9 @@ namespace Inceptum.Cqrs.Configuration
         }
         protected long FailedCommandRetryDelayInternal { get; set; }
 
-        protected BoundedContextRegistration(string name,bool isLocal)
+        protected BoundedContextRegistration(string name,bool isLocal, string localBoundedContext)
         {
+            m_LocalBoundedContext = localBoundedContext;
             ThreadCount = 4;
             FailedCommandRetryDelayInternal = 60000;
             m_Name = name;
@@ -70,7 +72,7 @@ namespace Inceptum.Cqrs.Configuration
 
         void IRegistration.Create(CqrsEngine cqrsEngine)
         {
-            var boundedContext = new BoundedContext(cqrsEngine, Name, ThreadCount, FailedCommandRetryDelayInternal, m_IsLocal);
+            var boundedContext = new BoundedContext(cqrsEngine, Name, ThreadCount, FailedCommandRetryDelayInternal, m_IsLocal,m_LocalBoundedContext);
             foreach (var descriptor in m_Configurators)
             {
                 descriptor.Create(boundedContext, cqrsEngine.DependencyResolver);

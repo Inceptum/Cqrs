@@ -369,7 +369,7 @@ namespace Inceptum.Cqrs.Tests
                 ,
                 LocalBoundedContext.Named("projections")
                                    .WithProjection<EventsListener>("local"),
-                RemoteBoundedContext.Named("remote")
+                RemoteBoundedContext.Named("remote", "projections")
                                     .ListeningCommands(typeof (object)).On("remoteCommands")
                                     .PublishingEvents(typeof (int)).To("remoteEvents"),
                 Saga<TestSaga>.Listening("local", "projections"),
@@ -522,9 +522,9 @@ namespace Inceptum.Cqrs.Tests
         public void ReplayEventsRmqTest()
         {
             var endpointResolver = MockRepository.GenerateMock<IEndpointResolver>();
-            endpointResolver.Expect(r => r.Resolve("local", "commands", typeof(string))).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("local", "events", typeof(TestAggregateRootNameChangedEvent))).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("local", "events", typeof(TestAggregateRootCreatedEvent))).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local","local", "commands", typeof(string))).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootNameChangedEvent))).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootCreatedEvent))).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
 
 
             var transports = new Dictionary<string, TransportInfo> { { "rmq", new TransportInfo("localhost", "guest", "guest", null, "RabbitMq") } };
