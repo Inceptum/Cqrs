@@ -330,7 +330,7 @@ namespace Inceptum.Cqrs.Tests
                 {"commandExchange", new Endpoint("test", "unistream.u1.commands", true, "json")},
                 {"commandQueue", new Endpoint("test", "unistream.u1.commands", true, "json")}
             };
-        public Endpoint Resolve(string boundedContext, string endpoint)
+        public Endpoint Resolve(string boundedContext, string endpoint,Type type)
         {
             return m_Endpoints[endpoint];
         }
