@@ -9,7 +9,7 @@ namespace Inceptum.Cqrs
     {
         readonly Dictionary<Tuple<string,string>,Endpoint> m_Cache=new  Dictionary<Tuple<string, string>, Endpoint>();
         private readonly IEndpointProvider m_EndpointProvider;
-        private string m_Transport;
+        private readonly string m_Transport;
         private string m_SerializationFormat;
 
         public RabbitMqConventionEndpointResolver(string transport,string serializationFormat,IEndpointProvider endpointProvider)
@@ -20,7 +20,7 @@ namespace Inceptum.Cqrs
         }
 
 
-        public Endpoint Resolve(string boundedContext,string endpoint)
+        public Endpoint Resolve(string boundedContext, string endpoint, Type type)
         {
             lock (m_Cache)
             {
@@ -35,20 +35,20 @@ namespace Inceptum.Cqrs
                     return ep;
                 }
 
-                ep=createEndpoint(boundedContext, endpoint);
+                ep=createEndpoint(boundedContext, endpoint,type);
                 m_Cache.Add(key,ep);
                 return ep;
             }
         }
 
-        private  Endpoint createEndpoint(string boundedContext, string endpoint)
+        private  Endpoint createEndpoint(string boundedContext, string endpoint,Type type)
         {
             m_SerializationFormat = "protobuf";
             return new Endpoint
             {
                 Destination = new Destination
                 {
-                    Publish = string.Format("topic://{0}.Exchange/{1}", boundedContext, endpoint),
+                    Publish = string.Format("topic://{0}.Exchange/{1}", boundedContext, type.Name),
                     Subscribe = string.Format("{0}.Queue.{1}", boundedContext, endpoint)
                 },
                 SerializationFormat = m_SerializationFormat,
