@@ -22,13 +22,15 @@ namespace Inceptum.Cqrs.Configuration
         public string Name { get; set; }
         public int ThreadCount { get; set; }
         public long FailedCommandRetryDelay { get; set; }
-        public bool IsLocal { get; set; }
+        public bool IsLocal { get; private  set; }
+        public string LocalBoundedContext { get; private set; }
 
-        internal BoundedContext(CqrsEngine cqrsEngine, string name, int threadCount, long failedCommandRetryDelay, bool isLocal)
+        internal BoundedContext(CqrsEngine cqrsEngine, string name, int threadCount, long failedCommandRetryDelay, bool isLocal, string localBoundedContext)
         {
             ThreadCount = threadCount;
             FailedCommandRetryDelay = failedCommandRetryDelay;
             IsLocal = isLocal;
+            LocalBoundedContext = localBoundedContext;
             Name = name;
             EventsPublisher = new EventsPublisher(cqrsEngine, this);
             CommandDispatcher = new CommandDispatcher(Name, threadCount, failedCommandRetryDelay);

@@ -141,7 +141,7 @@ namespace Inceptum.Cqrs.Tests
             using (var container = new WindsorContainer())
             {
                 container.Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(LocalBoundedContext.Named("local"), RemoteBoundedContext.Named("remote")))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(LocalBoundedContext.Named("local"), RemoteBoundedContext.Named("remote","local")))
                     .Register(Component.For<EventListener>().AsProjection("local", "remote"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
 
@@ -330,7 +330,7 @@ namespace Inceptum.Cqrs.Tests
                 {"commandExchange", new Endpoint("test", "unistream.u1.commands", true, "json")},
                 {"commandQueue", new Endpoint("test", "unistream.u1.commands", true, "json")}
             };
-        public Endpoint Resolve(string boundedContext, string endpoint,Type type)
+        public Endpoint Resolve(string localBoundedContext,string remoteBoundedContext, string endpoint,Type type)
         {
             return m_Endpoints[endpoint];
         }

@@ -2,9 +2,9 @@
 {
     public static class RemoteBoundedContext
     {
-        public static RemoteBoundedContextRegistration Named(string name)
+        public static RemoteBoundedContextRegistration Named(string name,string localBoundedContext)
         {
-            return new RemoteBoundedContextRegistration(name);
+            return new RemoteBoundedContextRegistration(name, localBoundedContext);
         }
     }
 }

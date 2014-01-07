@@ -5,6 +5,6 @@ namespace Inceptum.Cqrs
 {
     public interface IEndpointResolver
     {
-        Endpoint Resolve(string boundedContext, string endpoint, Type type);
+        Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type);
     }
 }
