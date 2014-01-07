@@ -183,6 +183,9 @@ namespace Inceptum.Cqrs
         {
             var allEndpointsAreValid = true;
             var errorMessage=new StringBuilder("Some endpoints are not valid:").AppendLine();
+            var log = new StringBuilder();
+            log.Append("Endpoints verification").AppendLine();
+
 
             foreach (var boundedContext in BoundedContexts)
             {
@@ -199,20 +202,22 @@ namespace Inceptum.Cqrs
 
                 allEndpointsAreValid = 
                     allEndpointsAreValid &&
-                    verifyEndpoints(boundedContext, eventPublishRoutes, eventSubscribeRoutes, errorMessage) &&
-                    verifyEndpoints(boundedContext, commandPublishRoutes, commandSubscribeRoutes, errorMessage);
+                    verifyEndpoints(boundedContext, eventPublishRoutes, eventSubscribeRoutes, errorMessage,log) &&
+                    verifyEndpoints(boundedContext, commandPublishRoutes, commandSubscribeRoutes, errorMessage, log);
             }
             if (!allEndpointsAreValid)
                 throw new ConfigurationErrorsException(errorMessage.ToString());
+
+            m_Logger.Debug(log);
+
         }
 
-        private bool verifyEndpoints(BoundedContext boundedContext, IEnumerable<Tuple<string, Type>> publishRoutes, IEnumerable<Tuple<string, Type>> subscribeRoutes, StringBuilder errorMessage)
+        private bool verifyEndpoints(BoundedContext boundedContext, IEnumerable<Tuple<string, Type>> publishRoutes, IEnumerable<Tuple<string, Type>> subscribeRoutes, StringBuilder errorMessage, StringBuilder log)
         {
             var publishEndpoints = publishRoutes.Select(t => new { route = t.Item1, type = t.Item2 }).Distinct().ToArray();
             var subscribeEndpoints = subscribeRoutes.Select(t => new { route = t.Item1, type = t.Item2 }).Distinct().ToArray();
             var routeBindings = publishEndpoints.Union(subscribeEndpoints);
-            var log = new StringBuilder();
-            log.Append("Endpoints verification").AppendLine();
+           
 
             var res= routeBindings.Aggregate(true, (isValid, routeBinding) =>
             {
@@ -223,26 +228,25 @@ namespace Inceptum.Cqrs
                     !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Publish, m_CreateMissingEndpoints,
                         out error))
                 {
-                    errorMessage.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for publishing: {4}.",boundedContext.Name, routeBinding.route,routeBinding.type, endpoint, error).AppendLine();
-                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for publishing: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type, endpoint, error).AppendLine();
+                    errorMessage.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for publishing: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
+                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for publishing: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
                     result = false;
                 }
 
                 if (subscribeEndpoints.Contains(routeBinding) &&
                     !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, m_CreateMissingEndpoints, out error))
                 {
-                    errorMessage.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for subscription: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type, endpoint, error).AppendLine();
-                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for subscription: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type, endpoint, error).AppendLine();
+                    errorMessage.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for subscription: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
+                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for subscription: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
                     result = false;
                 }
 
                 if(result)
-                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} : OK", boundedContext.Name, routeBinding.route, routeBinding.type, endpoint).AppendLine(); 
+                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} : OK", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint).AppendLine(); 
                 
                 return result && isValid;
             });
 
-            m_Logger.Debug(log);
             return res;
         }
 
