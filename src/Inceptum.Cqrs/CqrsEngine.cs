@@ -186,10 +186,21 @@ namespace Inceptum.Cqrs
 
             foreach (var boundedContext in BoundedContexts)
             {
+                IEnumerable<Tuple<string, Type>> eventSubscribeRoutes = boundedContext.EventsSubscriptions.SelectMany(s=>s.Value.Select(v=>Tuple.Create(s.Key,v))).ToArray();
+                IEnumerable<Tuple<string, Type>> eventPublishRoutes = boundedContext.EventRoutes.Select(p=>Tuple.Create(p.Value,p.Key));
+                IEnumerable<Tuple<string, Type>> commandSubscribeRoutes = boundedContext.CommandsSubscriptions.SelectMany(s => s.Types.Select(v => Tuple.Create(s.Endpoint, v.Key))).ToArray();
+                IEnumerable<Tuple<string, Type>> commandPublishRoutes = boundedContext.CommandRoutes.Select(p => Tuple.Create(p.Value, p.Key.Item1));
+                if (boundedContext.IsLocal)
+                {
+                    eventPublishRoutes = eventPublishRoutes.Union(eventSubscribeRoutes).ToArray();
+                    commandPublishRoutes = commandPublishRoutes.Union(commandSubscribeRoutes).ToArray();
+                }
+
+
                 allEndpointsAreValid = 
                     allEndpointsAreValid &&
-                    verifyEndpoints(boundedContext, boundedContext.EventRoutes.Select(p=>Tuple.Create(p.Value,p.Key)), boundedContext.EventsSubscriptions.SelectMany(s=>s.Value.Select(v=>Tuple.Create(s.Key,v))), errorMessage) &&
-                    verifyEndpoints(boundedContext, boundedContext.CommandRoutes.Select(p => Tuple.Create(p.Value, p.Key.Item1)), boundedContext.CommandsSubscriptions.SelectMany(s => s.Types.Select(v => Tuple.Create(s.Endpoint, v.Key))), errorMessage);
+                    verifyEndpoints(boundedContext, eventPublishRoutes, eventSubscribeRoutes, errorMessage) &&
+                    verifyEndpoints(boundedContext, commandPublishRoutes, commandSubscribeRoutes, errorMessage);
             }
             if (!allEndpointsAreValid)
                 throw new ConfigurationErrorsException(errorMessage.ToString());
@@ -201,7 +212,7 @@ namespace Inceptum.Cqrs
             var subscribeEndpoints = subscribeRoutes.Select(t => new { route = t.Item1, type = t.Item2 }).Distinct().ToArray();
             var routeBindings = publishEndpoints.Union(subscribeEndpoints);
             var log = new StringBuilder();
-            log.Append("Enddpoints verification").AppendLine();
+            log.Append("Endpoints verification").AppendLine();
 
             var res= routeBindings.Aggregate(true, (isValid, routeBinding) =>
             {
@@ -226,7 +237,7 @@ namespace Inceptum.Cqrs
                 }
 
                 if(result)
-                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} : OK.", boundedContext.Name, routeBinding.route, routeBinding.type, endpoint).AppendLine(); 
+                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} : OK", boundedContext.Name, routeBinding.route, routeBinding.type, endpoint).AppendLine(); 
                 
                 return result && isValid;
             });

@@ -33,6 +33,7 @@ namespace Inceptum.Cqrs.Configuration
 
         Type[] m_Dependencies=new Type[0];
         private readonly string m_Name;
+        private readonly bool m_IsLocal;
 
         public IEnumerable<Type> Dependencies
         {
@@ -51,11 +52,12 @@ namespace Inceptum.Cqrs.Configuration
         }
         protected long FailedCommandRetryDelayInternal { get; set; }
 
-        protected BoundedContextRegistration(string name)
+        protected BoundedContextRegistration(string name,bool isLocal)
         {
             ThreadCount = 4;
             FailedCommandRetryDelayInternal = 60000;
             m_Name = name;
+            m_IsLocal = isLocal;
             AddDescriptor(new SubscriptionDescriptor(m_EventsSubscriptions, m_CommandsSubscriptions));
             AddDescriptor(new RoutingDescriptor(m_EventRoutes, m_CommandRoutes));
         }
@@ -68,7 +70,7 @@ namespace Inceptum.Cqrs.Configuration
 
         void IRegistration.Create(CqrsEngine cqrsEngine)
         {
-            var boundedContext=new BoundedContext(cqrsEngine,Name, ThreadCount,FailedCommandRetryDelayInternal);
+            var boundedContext = new BoundedContext(cqrsEngine, Name, ThreadCount, FailedCommandRetryDelayInternal, m_IsLocal);
             foreach (var descriptor in m_Configurators)
             {
                 descriptor.Create(boundedContext, cqrsEngine.DependencyResolver);

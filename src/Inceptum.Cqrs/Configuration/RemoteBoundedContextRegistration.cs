@@ -6,7 +6,7 @@ namespace Inceptum.Cqrs.Configuration
 {
     public class RemoteBoundedContextRegistration : BoundedContextRegistration 
     {
-        public RemoteBoundedContextRegistration(string name) : base(name)
+        public RemoteBoundedContextRegistration(string name) : base(name,false)
         {
         }
 
