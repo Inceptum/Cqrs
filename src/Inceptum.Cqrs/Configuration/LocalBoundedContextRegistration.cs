@@ -20,7 +20,7 @@ namespace Inceptum.Cqrs.Configuration
     public class LocalBoundedContextRegistration : BoundedContextRegistration 
     {
         public LocalBoundedContextRegistration(string name)
-            : base(name)
+            : base(name,true)
         {
         }
         public LocalBoundedContextRegistration ConcurrencyLevel(int threadCount)
