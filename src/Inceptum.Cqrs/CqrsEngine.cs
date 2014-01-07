@@ -77,6 +77,7 @@ namespace Inceptum.Cqrs
 
         private void init()
         {
+
             foreach (var registration in m_Registrations)
             {
                 registration.Create(this);
@@ -90,6 +91,9 @@ namespace Inceptum.Cqrs
             {
                 boundedContext.Processes.ForEach(p => p.Start(this, boundedContext.EventsPublisher));
             }
+            var boundedContextsWithWrongLocal = m_BoundedContexts.Where(bc => m_BoundedContexts.All(b => b.Name != bc.LocalBoundedContext || !b.IsLocal)).ToArray();
+            if (boundedContextsWithWrongLocal.Any())
+                throw new ConfigurationErrorsException("Following bounded contexts are mapped to not existing local bounded context: " + string.Join(", ", boundedContextsWithWrongLocal.Select(s => string.Format("'{0}'", s.Name))));
 
             ensureEndpoints();
             foreach (var boundedContext in BoundedContexts)
@@ -343,6 +347,7 @@ namespace Inceptum.Cqrs
         internal IDependencyResolver DependencyResolver {
             get { return m_DependencyResolver; }
         }
+
     }
 
     internal interface ICqrsEngine : ICommandSender

@@ -179,6 +179,19 @@ namespace Inceptum.Cqrs.Tests
                                                       .RoutedFrom("commandExchange"));
         }
 
+  
+        [Test]
+        [ExpectedException(typeof (ConfigurationErrorsException),
+            ExpectedMessage = "Following bounded contexts are mapped to not existing local bounded context: 'remoteBc', 'remote2'")]
+        public void RemoteBoundedContextShouldHaveValidLocalOneAssignedType()
+        {
+            new InMemoryCqrsEngine(
+                LocalBoundedContext.Named("bc"),
+                RemoteBoundedContext.Named("remoteBc","local1"),
+                RemoteBoundedContext.Named("remote2", "remoteBc")
+                );
+        }
+
 
         [Test]
         public void ListenSameCommandOnDifferentEndpointsTest()
