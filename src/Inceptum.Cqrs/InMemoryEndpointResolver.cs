@@ -6,7 +6,7 @@ namespace Inceptum.Cqrs
 {
     internal class InMemoryEndpointResolver:IEndpointResolver
     {
-        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type)
+        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type, RouteType routeType)
         {
             return new Endpoint("InMemory", localBoundedContext+"."+endpoint, true, "json");
         }

@@ -7,7 +7,7 @@ namespace Inceptum.Cqrs
 {
     public class RabbitMqConventionEndpointResolver : IEndpointResolver
     {
-        readonly Dictionary<Tuple<string,string>,Endpoint> m_Cache=new  Dictionary<Tuple<string, string>, Endpoint>();
+        readonly Dictionary<Tuple<string, string, string, Type, RouteType>, Endpoint> m_Cache = new Dictionary<Tuple<string, string, string, Type, RouteType>, Endpoint>();
         private readonly IEndpointProvider m_EndpointProvider;
         private readonly string m_Transport;
         private string m_SerializationFormat;
@@ -20,11 +20,11 @@ namespace Inceptum.Cqrs
         }
 
 
-        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type)
+        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type, RouteType routeType)
         {
             lock (m_Cache)
             {
-                var key = Tuple.Create(localBoundedContext, endpoint);
+                var key = Tuple.Create(localBoundedContext,remoteBoundedContext, endpoint,type,routeType );
                 Endpoint ep;
                 if (m_Cache.TryGetValue(key, out ep)) return ep;
 
@@ -35,21 +35,33 @@ namespace Inceptum.Cqrs
                     return ep;
                 }
 
-                ep=createEndpoint(localBoundedContext, remoteBoundedContext,  endpoint,type);
+                ep=createEndpoint(localBoundedContext, remoteBoundedContext,  endpoint,type,routeType);
                 m_Cache.Add(key,ep);
                 return ep;
             }
         }
 
-        private Endpoint createEndpoint(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type)
+        private Endpoint createEndpoint(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type,RouteType routeType)
         {
             m_SerializationFormat = "protobuf";
+            string subscribe;
+            if (routeType == RouteType.Commands)
+            {
+                subscribe = remoteBoundedContext == localBoundedContext
+                    ? string.Format("{0}.queue.{1}.{2}", localBoundedContext, routeType.ToString().ToLower(), endpoint)
+                    : null;
+            }
+            else
+            {
+                subscribe = string.Format("{0}.queue.{1}.{2}.{3}", localBoundedContext, remoteBoundedContext , routeType.ToString().ToLower(), endpoint);
+            }
+            
             return new Endpoint
             {
                 Destination = new Destination
                 {
-                    Publish = string.Format("topic://{0}.exchange/{1}", remoteBoundedContext, type.Name),
-                    Subscribe = string.Format("{0}.queue.{1}.{2}", localBoundedContext, remoteBoundedContext, endpoint)
+                    Publish = string.Format("topic://{0}.{1}.exchange/{2}", remoteBoundedContext, routeType.ToString().ToLower(), type.Name),
+                    Subscribe = subscribe
                 },
                 SerializationFormat = m_SerializationFormat,
                 SharedDestination = true,
@@ -57,4 +69,6 @@ namespace Inceptum.Cqrs
             };
         }
     }
+
+   
 }
