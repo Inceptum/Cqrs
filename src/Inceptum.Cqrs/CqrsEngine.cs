@@ -105,7 +105,7 @@ namespace Inceptum.Cqrs
                     var localBoundedContextName = boundedContext.LocalBoundedContext;
                     var groupedBySubscribeEndpoint=eventsSubscription.Value.GroupBy(type =>
                     {
-                        var e = m_EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type);
+                        var e = m_EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type,RouteType.Events);
                         return new Endpoint(e.TransportId, "", e.Destination.Subscribe, e.SharedDestination,
                             e.SerializationFormat);
                     });
@@ -138,7 +138,7 @@ namespace Inceptum.Cqrs
                     {
                         var type = t.Key;
                         var commandPriority = t.Value;
-                        var e = m_EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type);
+                        var e = m_EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type,RouteType.Commands);
                         return new
                         {
                             endpoint = new Endpoint(e.TransportId, "", e.Destination.Subscribe, e.SharedDestination,e.SerializationFormat),
@@ -195,10 +195,11 @@ namespace Inceptum.Cqrs
 
             foreach (var boundedContext in BoundedContexts)
             {
-                IEnumerable<Tuple<string, Type>> eventSubscribeRoutes = boundedContext.EventsSubscriptions.SelectMany(s=>s.Value.Select(v=>Tuple.Create(s.Key,v))).ToArray();
-                IEnumerable<Tuple<string, Type>> eventPublishRoutes = boundedContext.EventRoutes.Select(p=>Tuple.Create(p.Value,p.Key));
-                IEnumerable<Tuple<string, Type>> commandSubscribeRoutes = boundedContext.CommandsSubscriptions.SelectMany(s => s.Types.Select(v => Tuple.Create(s.Endpoint, v.Key))).ToArray();
-                IEnumerable<Tuple<string, Type>> commandPublishRoutes = boundedContext.CommandRoutes.Select(p => Tuple.Create(p.Value, p.Key.Item1));
+                log.AppendFormat("Bounded context '{0}':",boundedContext.Name).AppendLine();
+                IEnumerable<Tuple<string, Type, RouteType>> eventSubscribeRoutes = boundedContext.EventsSubscriptions.SelectMany(s => s.Value.Select(v => Tuple.Create(s.Key, v, RouteType.Events))).ToArray();
+                IEnumerable<Tuple<string, Type, RouteType>> eventPublishRoutes = boundedContext.EventRoutes.Select(p => Tuple.Create(p.Value, p.Key, RouteType.Events));
+                IEnumerable<Tuple<string, Type, RouteType>> commandSubscribeRoutes = boundedContext.CommandsSubscriptions.SelectMany(s => s.Types.Select(v => Tuple.Create(s.Endpoint, v.Key, RouteType.Commands))).ToArray();
+                IEnumerable<Tuple<string, Type, RouteType>> commandPublishRoutes = boundedContext.CommandRoutes.Select(p => Tuple.Create(p.Value, p.Key.Item1, RouteType.Commands));
                 if (boundedContext.IsLocal)
                 {
                     eventPublishRoutes = eventPublishRoutes.Union(eventSubscribeRoutes).ToArray();
@@ -218,37 +219,38 @@ namespace Inceptum.Cqrs
 
         }
 
-        private bool verifyEndpoints(BoundedContext boundedContext, IEnumerable<Tuple<string, Type>> publishRoutes, IEnumerable<Tuple<string, Type>> subscribeRoutes, StringBuilder errorMessage, StringBuilder log)
+        private bool verifyEndpoints(BoundedContext boundedContext, IEnumerable<Tuple<string, Type, RouteType>> publishRoutes, IEnumerable<Tuple<string, Type, RouteType>> subscribeRoutes, StringBuilder errorMessage, StringBuilder log)
         {
-            var publishEndpoints = publishRoutes.Select(t => new { route = t.Item1, type = t.Item2 }).Distinct().ToArray();
-            var subscribeEndpoints = subscribeRoutes.Select(t => new { route = t.Item1, type = t.Item2 }).Distinct().ToArray();
+            var publishEndpoints = publishRoutes.Select(t => new { route = t.Item1, type = t.Item2, routeType = t.Item3 }).Distinct().ToArray();
+            var subscribeEndpoints = subscribeRoutes.Select(t => new { route = t.Item1, type = t.Item2, routeType = t.Item3 }).Distinct().ToArray();
             var routeBindings = publishEndpoints.Union(subscribeEndpoints);
            
 
             var res= routeBindings.Aggregate(true, (isValid, routeBinding) =>
             {
-                var endpoint = m_EndpointResolver.Resolve(boundedContext.LocalBoundedContext,boundedContext.Name, routeBinding.route,routeBinding.type);
+                var messageType = routeBinding.routeType.ToString().ToLower().TrimEnd('s');
+                var endpoint = m_EndpointResolver.Resolve(boundedContext.LocalBoundedContext, boundedContext.Name, routeBinding.route, routeBinding.type, routeBinding.routeType);
                 string error;
                 bool result = true;
                 if (publishEndpoints.Contains(routeBinding) &&
                     !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Publish, m_CreateMissingEndpoints,
                         out error))
                 {
-                    errorMessage.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for publishing: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
-                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for publishing: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
+                    errorMessage.AppendFormat("Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for publishing: {5}.", boundedContext.Name, routeBinding.route, messageType, routeBinding.type.Name, endpoint, error).AppendLine();
+                    log.AppendFormat("Route '{1}' {2} type '{3}' resolved endpoint {4}: endpoint is not properly configured for publishing: {5}.", boundedContext.Name, routeBinding.route, messageType, routeBinding.type.Name, endpoint, error).AppendLine();
                     result = false;
                 }
 
                 if (subscribeEndpoints.Contains(routeBinding) &&
                     !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, m_CreateMissingEndpoints, out error))
                 {
-                    errorMessage.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for subscription: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
-                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} is not properly configured for subscription: {4}.", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint, error).AppendLine();
+                    errorMessage.AppendFormat("Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for subscription: {5}.", boundedContext.Name, routeBinding.route, messageType, routeBinding.type.Name, endpoint, error).AppendLine();
+                    log.AppendFormat("Route '{1}'  {2} type '{3}' resolved endpoint {4}}: endpoint is not properly configured for subscription: {5}.", boundedContext.Name, routeBinding.route, messageType, routeBinding.type.Name, endpoint, error).AppendLine();
                     result = false;
                 }
 
                 if(result)
-                    log.AppendFormat("Bounded context '{0}' route '{1}' type '{2}' resolved endpoint {3} : OK", boundedContext.Name, routeBinding.route, routeBinding.type.Name, endpoint).AppendLine(); 
+                    log.AppendFormat("Route '{1}' {2} type '{3}' resolved endpoint {4}: OK", boundedContext.Name, routeBinding.route,messageType, routeBinding.type.Name, endpoint).AppendLine(); 
                 
                 return result && isValid;
             });
@@ -297,7 +299,7 @@ namespace Inceptum.Cqrs
             {
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}",boundedContext,typeof(T),priority));
             }
-            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext,boundedContext, endpoint,typeof(T)));
+            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext,boundedContext, endpoint,typeof(T),RouteType.Commands));
         }
 
         public void ReplayEvents(string boundedContext, params Type[] types)
@@ -311,7 +313,7 @@ namespace Inceptum.Cqrs
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}", boundedContext, typeof(ReplayEventsCommand), CommandPriority.Normal));
             }
 
-            var ep = m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, endpoint, typeof(ReplayEventsCommand));
+            var ep = m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, endpoint, typeof(ReplayEventsCommand),RouteType.Commands);
 
             Destination tmpDestination;
             if (context.GetTempDestination(ep.TransportId, () => m_MessagingEngine.CreateTemporaryDestination(ep.TransportId,"EventReplay"), out tmpDestination))
@@ -336,7 +338,7 @@ namespace Inceptum.Cqrs
             var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
             if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found", boundedContext), "boundedContext");
-            PublishEvent(@event, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, endpoint, @event.GetType()));
+            PublishEvent(@event, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, endpoint, @event.GetType(),RouteType.Events));
         }
 
         internal void PublishEvent(object @event,Endpoint endpoint)

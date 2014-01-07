@@ -299,7 +299,33 @@ namespace Inceptum.Cqrs.Tests
             }
         }
 
+        [Test]
+        public void Test()
+        {
+            var endpointProvider = MockRepository.GenerateMock<IEndpointProvider>();
+            endpointProvider.Expect(p => p.Contains(null)).IgnoreArguments().Return(false);
+            ITransportResolver transpoerResolver = new TransportResolver(new Dictionary<string, TransportInfo>
+            {
+                {"tr1", new TransportInfo("none", "none", "none", null, "InMemory")}
+            });
 
+            using (var messagingEngine =new MessagingEngine(transpoerResolver))
+            {
+                using (new CqrsEngine(messagingEngine,
+                    new RabbitMqConventionEndpointResolver("tr1", "protobuf", endpointProvider),
+                    LocalBoundedContext.Named("operations")
+                        .PublishingEvents(typeof (int)).To("eventsRoute").NotRouted()
+                        .ListeningCommands(typeof (string)).On("commandsRoute").RoutedFromSameEndpoint(),
+
+                    RemoteBoundedContext.Named("integration", "operations")
+                        .PublishingEvents(typeof (int)).To("eventsRoute")
+                        .ListeningCommands(typeof (string)).On("commandsRoute"))
+                    )
+                {
+
+                }
+            }
+        }
 
         [Test]
         [Ignore("investigation test")]
@@ -535,9 +561,9 @@ namespace Inceptum.Cqrs.Tests
         public void ReplayEventsRmqTest()
         {
             var endpointResolver = MockRepository.GenerateMock<IEndpointResolver>();
-            endpointResolver.Expect(r => r.Resolve("local","local", "commands", typeof(string))).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootNameChangedEvent))).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootCreatedEvent))).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local","local", "commands", typeof(string),RouteType.Commands)).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootNameChangedEvent),RouteType.Events)).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootCreatedEvent),RouteType.Events)).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
 
 
             var transports = new Dictionary<string, TransportInfo> { { "rmq", new TransportInfo("localhost", "guest", "guest", null, "RabbitMq") } };
