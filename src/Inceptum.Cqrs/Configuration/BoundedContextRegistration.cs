@@ -88,8 +88,6 @@ namespace Inceptum.Cqrs.Configuration
             {
                 descriptor.Process(boundedContext, cqrsEngine);
             }
-
-            boundedContext.CommandDispatcher.Wire(boundedContext.InfrastructureCommandsHandler);
         }
 
         internal void AddSubscribedEvents(IEnumerable<Type> types, string endpoint)
