@@ -200,11 +200,10 @@ namespace Inceptum.Cqrs
                 IEnumerable<Tuple<string, Type, RouteType>> eventPublishRoutes = boundedContext.EventRoutes.Select(p => Tuple.Create(p.Value, p.Key, RouteType.Events));
                 IEnumerable<Tuple<string, Type, RouteType>> commandSubscribeRoutes = boundedContext.CommandsSubscriptions.SelectMany(s => s.Types.Select(v => Tuple.Create(s.Endpoint, v.Key, RouteType.Commands))).ToArray();
                 IEnumerable<Tuple<string, Type, RouteType>> commandPublishRoutes = boundedContext.CommandRoutes.Select(p => Tuple.Create(p.Value, p.Key.Item1, RouteType.Commands));
-                if (boundedContext.IsLocal)
-                {
-                    eventPublishRoutes = eventPublishRoutes.Union(eventSubscribeRoutes).ToArray();
-                    commandPublishRoutes = commandPublishRoutes.Union(commandSubscribeRoutes).ToArray();
-                }
+                
+                eventPublishRoutes = eventPublishRoutes.Union(eventSubscribeRoutes).ToArray();
+                commandPublishRoutes = commandPublishRoutes.Union(commandSubscribeRoutes).ToArray();
+                
 
 
                 allEndpointsAreValid = 
