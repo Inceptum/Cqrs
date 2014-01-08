@@ -17,12 +17,16 @@ namespace Inceptum.Cqrs.Configuration
         High=1
     }
 
+  
+
     public class LocalBoundedContextRegistration : BoundedContextRegistration 
     {
         public LocalBoundedContextRegistration(string name)
             : base(name,true,name)
         {
+            AddDescriptor(new InfrastructureCommandsHandlerDescriptor());
         }
+
         public LocalBoundedContextRegistration ConcurrencyLevel(int threadCount)
         {
             if (threadCount < 1) throw new ArgumentException("threadCount should be greater then 0", "threadCount");
@@ -142,8 +146,6 @@ namespace Inceptum.Cqrs.Configuration
                 throw new ArgumentException("Endpoint list is empty","listenEndpoint");
             return new RoutedFromDescriptor(m_Registration, m_Types, listenEndpoint, priority);
         }
-
-        
     }
 
     public class RoutedFromDescriptor

@@ -646,7 +646,27 @@ namespace Inceptum.Cqrs.Tests
 
         }
 
+        [Test]
+        public void RemoteBCsWithSameNameAndListeningInfrastructureCommandsTest()
+        {
+            new InMemoryCqrsEngine(
+                LocalBoundedContext.Named("bc1").ListeningInfrastructureCommands().On("commands").RoutedFromSameEndpoint(),
+                LocalBoundedContext.Named("bc2").ListeningInfrastructureCommands().On("commands").RoutedFromSameEndpoint(),
+                RemoteBoundedContext.Named("remoteBc", "bc1").ListeningInfrastructureCommands().On("commands"),
+                RemoteBoundedContext.Named("remoteBc", "bc2").ListeningInfrastructureCommands().On("commands")
+                );
+        }
 
+        [Test]
+        public void RemoteBCsWithSameNameTest()
+        {
+            new InMemoryCqrsEngine(
+                LocalBoundedContext.Named("bc1"),
+                LocalBoundedContext.Named("bc2"),
+                RemoteBoundedContext.Named("remoteBc", "bc1"),
+                RemoteBoundedContext.Named("remoteBc", "bc2")
+                );
+        }
     }
 
     public class TestProcess:IProcess

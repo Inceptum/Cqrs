@@ -112,6 +112,7 @@
     <Compile Include="Configuration\GetEventStoreDescriptor.cs" />
     <Compile Include="Configuration\DescriptorWithDependencies.cs" />
     <Compile Include="Configuration\GregYoungEventStoreRepository.cs" />
+    <Compile Include="Configuration\InfrastructureCommandsHandlerDescriptor.cs" />
     <Compile Include="EventSourcing\NEventStoreAdapter.cs" />
     <Compile Include="EventsPublisher.cs" />
     <Compile Include="Configuration\EventStoreDescriptor.cs" />

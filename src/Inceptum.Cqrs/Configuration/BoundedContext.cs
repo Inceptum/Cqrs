@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using CommonDomain.Persistence;
-using Inceptum.Cqrs.InfrastructureCommands;
 using Inceptum.Messaging.Contract;
 
 namespace Inceptum.Cqrs.Configuration
@@ -17,7 +15,6 @@ namespace Inceptum.Cqrs.Configuration
         internal EventDispatcher EventDispatcher { get; private set; }
         internal List<IProcess> Processes { get; private set; }
         internal IEventStoreAdapter EventStore { get; set; }
-        internal InfrastructureCommandsHandler InfrastructureCommandsHandler { get; set; }
         readonly Dictionary<string,Destination> m_TempDestinations=new Dictionary<string, Destination>(); 
         public string Name { get; set; }
         public int ThreadCount { get; set; }
@@ -36,7 +33,6 @@ namespace Inceptum.Cqrs.Configuration
             CommandDispatcher = new CommandDispatcher(Name, threadCount, failedCommandRetryDelay);
             EventDispatcher = new EventDispatcher(Name);
             Processes = new List<IProcess>();
-            InfrastructureCommandsHandler = new InfrastructureCommandsHandler(cqrsEngine, this);
         }
 
         public bool GetTempDestination(string transportId,Func<Destination> generate , out Destination destination)
