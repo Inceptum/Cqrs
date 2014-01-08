@@ -245,7 +245,7 @@ namespace Inceptum.Cqrs
                     !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, m_CreateMissingEndpoints, out error))
                 {
                     errorMessage.AppendFormat("Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for subscription: {5}.", boundedContext.Name, routeBinding.route, messageType, routeBinding.type.Name, endpoint, error).AppendLine();
-                    log.AppendFormat("Route '{1}'  {2} type '{3}' resolved endpoint {4}}: endpoint is not properly configured for subscription: {5}.", boundedContext.Name, routeBinding.route, messageType, routeBinding.type.Name, endpoint, error).AppendLine();
+                    log.AppendFormat("Route '{1}'  {2} type '{3}' resolved endpoint {4}: endpoint is not properly configured for subscription: {5}.", boundedContext.Name, routeBinding.route, messageType, routeBinding.type.Name, endpoint, error).AppendLine();
                     result = false;
                 }
 
