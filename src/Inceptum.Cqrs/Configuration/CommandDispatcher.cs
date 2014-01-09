@@ -21,7 +21,7 @@ namespace Inceptum.Cqrs.Configuration
 
     internal class CommandDispatcher:IDisposable
     {
-        readonly Dictionary<Type, Func<object, Endpoint,CommandHandlingResult>> m_Handlers = new Dictionary<Type, Func<object, Endpoint, CommandHandlingResult>>();
+        readonly Dictionary<Type, Func<object, Endpoint,string,CommandHandlingResult>> m_Handlers = new Dictionary<Type, Func<object, Endpoint,string, CommandHandlingResult>>();
         private readonly string m_BoundedContext;
         private readonly QueuedTaskScheduler m_QueuedTaskScheduler;
         private readonly Dictionary<CommandPriority,TaskFactory> m_TaskFactories=new Dictionary<CommandPriority, TaskFactory>();
@@ -79,6 +79,7 @@ namespace Inceptum.Cqrs.Configuration
             Type handledType;
             var command = Expression.Parameter(typeof(object), "command");
             var endpoint = Expression.Parameter(typeof(Endpoint), "endpoint");
+            var route = Expression.Parameter(typeof(string), "route");
 
 
             Expression commandParameter;
@@ -91,8 +92,8 @@ namespace Inceptum.Cqrs.Configuration
             else
             {
                 handledType = commandType.GetGenericArguments()[0];
-                var ctor = commandType.GetConstructor(new[] { handledType, typeof(Endpoint) });
-                commandParameter = Expression.New(ctor, Expression.Convert(command, handledType), endpoint);
+                var ctor = commandType.GetConstructor(new[] { handledType, typeof(Endpoint) ,typeof(string)});
+                commandParameter = Expression.New(ctor, Expression.Convert(command, handledType), endpoint, route);
             }
 
                            
@@ -101,9 +102,9 @@ namespace Inceptum.Cqrs.Configuration
             var call = Expression.Call(Expression.Constant(o), "Handle", null, parameters);
 
 
-            Expression<Func<object, Endpoint,CommandHandlingResult>> lambda;
+            Expression<Func<object, Endpoint, string, CommandHandlingResult>> lambda;
             if (returnsResult)
-                lambda = (Expression<Func<object, Endpoint, CommandHandlingResult>>)Expression.Lambda(call, command, endpoint);
+                lambda = (Expression<Func<object, Endpoint, string, CommandHandlingResult>>)Expression.Lambda(call, command, endpoint, route);
             else
             {
                 LabelTarget returnTarget = Expression.Label(typeof(CommandHandlingResult));
@@ -111,11 +112,11 @@ namespace Inceptum.Cqrs.Configuration
                 var block = Expression.Block(
                     call,
                     returnLabel);
-                lambda = (Expression<Func<object, Endpoint,CommandHandlingResult>>)Expression.Lambda(block, command,endpoint);
+                lambda = (Expression<Func<object, Endpoint, string, CommandHandlingResult>>)Expression.Lambda(block, command, endpoint,route);
             }
 
 
-            Func<object,Endpoint , CommandHandlingResult> handler;
+            Func<object, Endpoint, string, CommandHandlingResult> handler;
             if (m_Handlers.TryGetValue(handledType, out handler))
             {
                 throw new InvalidOperationException(string.Format(
@@ -124,9 +125,9 @@ namespace Inceptum.Cqrs.Configuration
             m_Handlers.Add(handledType, lambda.Compile());
         }
 
-        public void Dispatch(object command, CommandPriority priority, AcknowledgeDelegate acknowledge, Endpoint commandOriginEndpoint)
+        public void Dispatch(object command, CommandPriority priority, AcknowledgeDelegate acknowledge, Endpoint commandOriginEndpoint,string route)
         {
-            Func<object,Endpoint, CommandHandlingResult> handler;
+            Func<object, Endpoint, string, CommandHandlingResult> handler;
             if (!m_Handlers.TryGetValue(command.GetType(), out handler))
             {
 
@@ -135,14 +136,14 @@ namespace Inceptum.Cqrs.Configuration
                 return;
             }
 
-            m_TaskFactories[priority].StartNew(() => handle(command, acknowledge, handler,commandOriginEndpoint));
+            m_TaskFactories[priority].StartNew(() => handle(command, acknowledge, handler,commandOriginEndpoint,route));
         }
 
-        private void handle(object command, AcknowledgeDelegate acknowledge, Func<object,Endpoint, CommandHandlingResult> handler, Endpoint commandOriginEndpoint)
+        private void handle(object command, AcknowledgeDelegate acknowledge, Func<object, Endpoint, string, CommandHandlingResult> handler, Endpoint commandOriginEndpoint,string route)
         {
             try
             {
-                var result = handler(command,commandOriginEndpoint);
+                var result = handler(command,commandOriginEndpoint,route);
                 acknowledge(result.RetryDelay, !result.Retry);
             }
             catch (Exception e)

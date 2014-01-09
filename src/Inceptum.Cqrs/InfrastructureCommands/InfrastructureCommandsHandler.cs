@@ -10,14 +10,16 @@ namespace Inceptum.Cqrs.InfrastructureCommands
 
     class RoutedCommand<T>
     {
-        public RoutedCommand(T command, Endpoint originEndpoint)
+        public RoutedCommand(T command, Endpoint originEndpoint,string originRoute)
         {
             Command = command;
             OriginEndpoint = originEndpoint;
+            OriginRoute = originRoute;
         }
 
         public T Command { get; set; }
         public Endpoint OriginEndpoint { get; set; }
+        public string OriginRoute { get; set; }
     }
     internal class InfrastructureCommandsHandler
     {
@@ -40,7 +42,7 @@ namespace Inceptum.Cqrs.InfrastructureCommands
             var eventsFrom = m_BoundedContext.EventStore.GetEventsFrom(routedCommand.Command.From,routedCommand.Command.Types).ToArray();
             foreach (var @event in eventsFrom)
             {
-                m_CqrsEngine.PublishEvent(@event,endpoint);
+                m_CqrsEngine.PublishEvent(@event,endpoint,routedCommand.OriginRoute);
             }
         }
     }
