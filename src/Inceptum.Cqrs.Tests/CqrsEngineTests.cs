@@ -5,6 +5,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Reactive.Disposables;
 using System.Threading;
 using Castle.Core.Logging;
 using CommonDomain;
@@ -304,27 +305,67 @@ namespace Inceptum.Cqrs.Tests
         {
             var endpointProvider = MockRepository.GenerateMock<IEndpointProvider>();
             endpointProvider.Expect(p => p.Contains(null)).IgnoreArguments().Return(false);
-            ITransportResolver transpoerResolver = new TransportResolver(new Dictionary<string, TransportInfo>
-            {
-                {"tr1", new TransportInfo("none", "none", "none", null, "InMemory")}
-            });
+         
+            var messagingEngine = MockRepository.GenerateStrictMock<IMessagingEngine>();
+                
+            string error;
+            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(12);
+            //subscription for remote events
+            messagingEngine.Expect(e => e.Subscribe(
+                Arg<Endpoint>.Is.Anything,
+                Arg<CallbackDelegate<object>>.Is.Anything, 
+                Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
+                Arg<string>.Is.Equal("remoteEvents"),
+                Arg<int>.Is.Equal(0),
+                Arg<Type[]>.List.Equal(new []{typeof(int),typeof(long)}))).Return(Disposable.Empty);       
+            
+            //subscription for local events
+            messagingEngine.Expect(e => e.Subscribe(
+                Arg<Endpoint>.Is.Anything,
+                Arg<CallbackDelegate<object>>.Is.Anything, 
+                Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
+                Arg<string>.Is.Equal("localEvents"),
+                Arg<int>.Is.Equal(0),
+                Arg<Type[]>.List.Equal(new []{typeof(bool)}))).Return(Disposable.Empty);
+           
+            //subscription for localCommands
+            messagingEngine.Expect(e => e.Subscribe(
+                Arg<Endpoint>.Is.Anything,
+                Arg<CallbackDelegate<object>>.Is.Anything, 
+                Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
+                Arg<string>.Is.Equal("localCommands"),
+                Arg<int>.Is.Equal(0),
+                Arg<Type[]>.List.Equal(new[] { typeof(string), typeof(DateTime) }))).Return(Disposable.Empty);
+          
+            //send command to remote BC
+            messagingEngine.Expect(e => e.Send(
+                Arg<string>.Is.Equal("testCommand"),
+                Arg<Endpoint>.Is.Anything,
+                Arg<string>.Is.Equal("remoteCommands")
+                ));
 
-            using (var messagingEngine =new MessagingEngine(transpoerResolver))
-            {
-                using (new CqrsEngine(messagingEngine,
+            //publish event from local BC
+            messagingEngine.Expect(e => e.Send(
+                Arg<object>.Is.Equal(true),
+                Arg<Endpoint>.Is.Anything,
+                Arg<string>.Is.Equal("localEvents")
+                ));
+
+
+            using (var ce=new CqrsEngine(messagingEngine,
                     new RabbitMqConventionEndpointResolver("tr1", "protobuf", endpointProvider),
                     LocalBoundedContext.Named("operations")
-                        .PublishingEvents(typeof (int)).To("eventsRoute").NotRouted()
-                        .ListeningCommands(typeof (string)).On("commandsRoute").RoutedFromSameEndpoint(),
+                        .PublishingEvents(typeof (bool) ).To("localEvents").RoutedToSameEndpoint()
+                        .ListeningCommands(typeof (string),typeof(DateTime)).On("localCommands").RoutedFromSameEndpoint(),
 
                     RemoteBoundedContext.Named("integration", "operations")
-                        .PublishingEvents(typeof (int)).To("eventsRoute")
-                        .ListeningCommands(typeof (string)).On("commandsRoute"))
+                        .PublishingEvents(typeof (int),typeof(long)).To("remoteEvents")
+                        .ListeningCommands(typeof(string)).On("remoteCommands"))
                     )
                 {
-
+                    ce.SendCommand("testCommand","integration");
+                    ce.BoundedContexts.Find(bc=>bc.Name=="operations").EventsPublisher.PublishEvent(true);
                 }
-            }
         }
 
         [Test]

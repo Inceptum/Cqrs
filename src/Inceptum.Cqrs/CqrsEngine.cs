@@ -121,6 +121,8 @@ namespace Inceptum.Cqrs
                                 throw new InvalidOperationException("Unknown event received: " + type);
                                 //acknowledge(0, true);
                             },
+                            route,
+                            0,
                             group.ToArray()));
                     }
                 }
@@ -153,12 +155,14 @@ namespace Inceptum.Cqrs
                         m_Subscription.Add(m_MessagingEngine.Subscribe(
                             g.endpoint,
                             (command, acknowledge) =>
-                                context.CommandDispatcher.Dispatch(command, g.priority, acknowledge, g.endpoint),
+                                context.CommandDispatcher.Dispatch(command, g.priority, acknowledge, g.endpoint, route),
                             (type, acknowledge) =>
                             {
                                 throw new InvalidOperationException("Unknown command received: " + type);
                                 //acknowledge(0, true);
                             },
+                            route,
+                            0,
                             group.Select(gr => gr.Key).ToArray()
                             ));
                     }
@@ -293,12 +297,12 @@ namespace Inceptum.Cqrs
             var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
             if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found",boundedContext),"boundedContext");
-            string endpoint;
-            if (!context.CommandRoutes.TryGetValue(Tuple.Create(typeof (T),priority), out endpoint))
+            string route;
+            if (!context.CommandRoutes.TryGetValue(Tuple.Create(typeof (T),priority), out route))
             {
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}",boundedContext,typeof(T),priority));
             }
-            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext,boundedContext, endpoint,typeof(T),RouteType.Commands));
+            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, typeof(T), RouteType.Commands), route);
         }
 
         public void ReplayEvents(string boundedContext, params Type[] types)
@@ -330,19 +334,20 @@ namespace Inceptum.Cqrs
             SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = DateTime.MinValue, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext);
         }
 
-        internal void PublishEvent(object @event,string boundedContext,string endpoint)
+        internal void PublishEvent(object @event,string boundedContext,string route)
         {
 
 
             var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
             if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found", boundedContext), "boundedContext");
-            PublishEvent(@event, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, endpoint, @event.GetType(),RouteType.Events));
-        }
-
-        internal void PublishEvent(object @event,Endpoint endpoint)
+            Endpoint endpoint = m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, @event.GetType(),RouteType.Events);
+            PublishEvent(@event, endpoint, route);
+        }    
+        
+        internal void PublishEvent(object @event,Endpoint endpoint,string route)
         {
-            m_MessagingEngine.Send(@event, endpoint);
+            m_MessagingEngine.Send(@event, endpoint,route);
         }
 
         internal IDependencyResolver DependencyResolver {
