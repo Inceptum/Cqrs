@@ -8,6 +8,7 @@ using System.Text;
 using Castle.Components.DictionaryAdapter.Xml;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
+using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using NLog;
 
@@ -37,7 +38,9 @@ namespace Inceptum.Cqrs
         readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
         private readonly IMessagingEngine m_MessagingEngine;
         private readonly CompositeDisposable m_Subscription=new CompositeDisposable();
-        private readonly IEndpointResolver m_EndpointResolver;
+        internal  IEndpointResolver EndpointResolver { get; private set; }
+     
+        private readonly IEndpointProvider m_EndpointProvider;
         private readonly List<BoundedContext> m_BoundedContexts;
         internal List<BoundedContext> BoundedContexts {
             get { return m_BoundedContexts; }
@@ -52,24 +55,25 @@ namespace Inceptum.Cqrs
         }
 
 
-        public CqrsEngine(IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, params IRegistration[] registrations)
-            :this(new DefaultDependencyResolver(), messagingEngine, endpointResolver, registrations)
+        public CqrsEngine(IMessagingEngine messagingEngine, IEndpointProvider endpointProvider, params IRegistration[] registrations)
+            : this(new DefaultDependencyResolver(), messagingEngine, endpointProvider, registrations)
         {
         }
 
-        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine,IEndpointResolver endpointResolver, params IRegistration[] registrations)
-            :this(dependencyResolver, messagingEngine,endpointResolver, false, registrations)
+        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointProvider endpointProvider, params IRegistration[] registrations)
+            :this(dependencyResolver, messagingEngine,endpointProvider, false, registrations)
         {
         }
 
-        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, bool createMissingEndpoints, params IRegistration[] registrations)
+        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointProvider endpointProvider, bool createMissingEndpoints, params IRegistration[] registrations)
         {
             m_Logger.Debug("CqrsEngine instanciating. createMissingEndpoints: "+ createMissingEndpoints);
             m_CreateMissingEndpoints = createMissingEndpoints;
             m_DependencyResolver = dependencyResolver;
             m_Registrations = registrations;
-            m_EndpointResolver = endpointResolver;
+            EndpointResolver = new DefaultEndpointResolver();
             m_MessagingEngine = messagingEngine;
+            m_EndpointProvider = endpointProvider;
             m_BoundedContexts=new List<BoundedContext>();
             init();
             
@@ -105,7 +109,7 @@ namespace Inceptum.Cqrs
                     var localBoundedContextName = boundedContext.LocalBoundedContext;
                     var groupedBySubscribeEndpoint=eventsSubscription.Value.GroupBy(type =>
                     {
-                        var e = m_EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type,RouteType.Events);
+                        var e = EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type,RouteType.Events);
                         return new Endpoint(e.TransportId, "", e.Destination.Subscribe, e.SharedDestination,
                             e.SerializationFormat);
                     });
@@ -140,7 +144,7 @@ namespace Inceptum.Cqrs
                     {
                         var type = t.Key;
                         var commandPriority = t.Value;
-                        var e = m_EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type,RouteType.Commands);
+                        var e = EndpointResolver.Resolve(localBoundedContextName ,boundedContextName, route, type,RouteType.Commands);
                         return new
                         {
                             endpoint = new Endpoint(e.TransportId, "", e.Destination.Subscribe, e.SharedDestination,e.SerializationFormat),
@@ -166,24 +170,6 @@ namespace Inceptum.Cqrs
                             group.Select(gr => gr.Key).ToArray()
                             ));
                     }
-
-
-/*
-                    var endpoint = m_EndpointResolver.Resolve(boundedContext.Name, commandsSubscription.Endpoint);
-                    BoundedContext context = boundedContext;
-                    CommandSubscription commandSubscription = commandsSubscription;
-                    m_Subscription.Add(m_MessagingEngine.Subscribe(
-                        endpoint,
-                        (command, acknowledge) =>
-                            context.CommandDispatcher.Dispatch(command, commandSubscription.Types[command.GetType()],
-                                acknowledge, endpoint),
-                        (type, acknowledge) =>
-                        {
-                            throw new InvalidOperationException("Unknown command received: " + type);
-                            //acknowledge(0, true);
-                        },
-                        commandSubscription.Types.Keys.ToArray()));
-*/
                 }
             }
 
@@ -232,7 +218,7 @@ namespace Inceptum.Cqrs
             var res= routeBindings.Aggregate(true, (isValid, routeBinding) =>
             {
                 var messageType = routeBinding.routeType.ToString().ToLower().TrimEnd('s');
-                var endpoint = m_EndpointResolver.Resolve(boundedContext.LocalBoundedContext, boundedContext.Name, routeBinding.route, routeBinding.type, routeBinding.routeType);
+                var endpoint = EndpointResolver.Resolve(boundedContext.LocalBoundedContext, boundedContext.Name, routeBinding.route, routeBinding.type, routeBinding.routeType);
                 string error;
                 bool result = true;
                 if (publishEndpoints.Contains(routeBinding) &&
@@ -302,7 +288,7 @@ namespace Inceptum.Cqrs
             {
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}",boundedContext,typeof(T),priority));
             }
-            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, typeof(T), RouteType.Commands), route);
+            m_MessagingEngine.Send(command, EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, typeof(T), RouteType.Commands), route);
         }
 
         public void ReplayEvents(string boundedContext, params Type[] types)
@@ -316,7 +302,7 @@ namespace Inceptum.Cqrs
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}", boundedContext, typeof(ReplayEventsCommand), CommandPriority.Normal));
             }
 
-            var ep = m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, endpoint, typeof(ReplayEventsCommand),RouteType.Commands);
+            var ep = EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, endpoint, typeof(ReplayEventsCommand),RouteType.Commands);
 
             Destination tmpDestination;
             if (context.GetTempDestination(ep.TransportId, () => m_MessagingEngine.CreateTemporaryDestination(ep.TransportId,"EventReplay"), out tmpDestination))
@@ -341,7 +327,7 @@ namespace Inceptum.Cqrs
             var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
             if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found", boundedContext), "boundedContext");
-            Endpoint endpoint = m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, @event.GetType(),RouteType.Events);
+            Endpoint endpoint = EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, @event.GetType(),RouteType.Events);
             PublishEvent(@event, endpoint, route);
         }    
         

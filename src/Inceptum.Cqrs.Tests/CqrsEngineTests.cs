@@ -263,6 +263,42 @@ namespace Inceptum.Cqrs.Tests
         }
 
         [Test]
+        public void NewFluentApiPrototypeTest()
+        {
+            new CqrsEngine(null,MockRepository.GenerateMock<IEndpointProvider>(),
+                LocalBoundedContext.Named1("bc")
+                    .PublishingCommands(typeof(string)).To("operations").With("operationsCommandsRoute")
+                    .ListeningEvents(typeof(int)).From("operations").On("operationEventsRoute")
+                    .ListeningCommands(typeof(string)).On("commandsRoute")
+                        //same as .PublishingCommands(typeof(string)).To("bc").With("selfCommandsRoute")  
+                        .WithLoopback("selfCommandsRoute")
+                    .PublishingEvents(typeof(int)).With("eventsRoute")
+                        //same as.ListeningEvents(typeof(int)).From("bc").On("selfEventsRoute")
+                        .WithLoopback("selfEventsRoute")
+
+
+
+                    //explicit prioritization 
+                    .ListeningCommands(typeof(string)).On("commandsRoute")
+                        .Prioritized(lowestPriority: 2)
+                            .WithEndpoint("high").For(key=>key.Priority==0)
+                            .WithEndpoint("medium").For(key=>key.Priority==1)
+                            .WithEndpoint("low").For(key=>key.Priority==2)
+
+                    //resolver based prioritization 
+                    .ListeningCommands(typeof(string)).On("commandsRoute")
+                        .Prioritized(lowestPriority: 2)
+                            .WithEndpoint("high").For(key => key.Priority == 0)
+                            .WithEndpoint("medium").For(key => key.Priority == 1)
+                            .WithEndpoint("low").For(key => key.Priority == 2)
+                    .ProcessingOptions("selfCommandsRoute").MultiThreaded(10)
+               );
+                                                   
+
+        }
+
+
+        [Test]
         public void PrioritizedCommandsProcessingTest()
         {
             using (
@@ -278,7 +314,10 @@ namespace Inceptum.Cqrs.Tests
                                                    new InMemoryEndpointResolver(),
                                                    LocalBoundedContext.Named("bc").ConcurrencyLevel(1)
                                                                       .PublishingEvents(typeof (int)).To("eventExchange").RoutedTo("eventQueue")
-                                                                      .ListeningCommands(typeof (string)).On("exchange1", CommandPriority.Low).On("exchange2", CommandPriority.High).RoutedFrom("commandQueue")
+                                                                      .ListeningCommands(typeof (string))
+                                                                            .On("exchange1", CommandPriority.Low)
+                                                                            .On("exchange2", CommandPriority.High)
+                                                                            .RoutedFrom("commandQueue")
                                                                       .WithCommandsHandler(commandHandler))
                     )
                 {

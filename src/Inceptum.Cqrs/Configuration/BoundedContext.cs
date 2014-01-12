@@ -1,11 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using Inceptum.Cqrs.Routing;
 using Inceptum.Messaging.Contract;
 
 namespace Inceptum.Cqrs.Configuration
 {
     public class BoundedContext:IDisposable
     {
+        public static IBoundedContextRegistration Named(string name)
+        {
+            return new BoundedContextRegistration1(name);
+        }
+
+        internal Dictionary<string,RouteMap> RouteMap { get; private set; }
+
+
         internal Dictionary<Type, string> EventRoutes { get; set; }
         internal Dictionary<string, IEnumerable<Type>> EventsSubscriptions { get; set; }
         internal List<CommandSubscription> CommandsSubscriptions { get; set; }
@@ -15,15 +24,18 @@ namespace Inceptum.Cqrs.Configuration
         internal EventDispatcher EventDispatcher { get; private set; }
         internal List<IProcess> Processes { get; private set; }
         internal IEventStoreAdapter EventStore { get; set; }
-        readonly Dictionary<string,Destination> m_TempDestinations=new Dictionary<string, Destination>(); 
-        public string Name { get; set; }
-        public int ThreadCount { get; set; }
-        public long FailedCommandRetryDelay { get; set; }
-        public bool IsLocal { get; private  set; }
-        public string LocalBoundedContext { get; private set; }
+        readonly Dictionary<string,Destination> m_TempDestinations=new Dictionary<string, Destination>();
+        internal string Name { get; set; }
+        internal int ThreadCount { get; set; }
+        internal long FailedCommandRetryDelay { get; set; }
+        internal bool IsLocal { get; private set; }
+        internal string LocalBoundedContext { get; private set; }
 
         internal BoundedContext(CqrsEngine cqrsEngine, string name, int threadCount, long failedCommandRetryDelay, bool isLocal, string localBoundedContext)
         {
+            RouteMap = new Dictionary<string, RouteMap>();
+
+
             ThreadCount = threadCount;
             FailedCommandRetryDelay = failedCommandRetryDelay;
             IsLocal = isLocal;
@@ -35,7 +47,7 @@ namespace Inceptum.Cqrs.Configuration
             Processes = new List<IProcess>();
         }
 
-        public bool GetTempDestination(string transportId,Func<Destination> generate , out Destination destination)
+        internal bool GetTempDestination(string transportId, Func<Destination> generate, out Destination destination)
         {
             lock (m_TempDestinations)
             {

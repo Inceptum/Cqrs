@@ -20,40 +20,40 @@ namespace Inceptum.Cqrs
         }
 
 
-        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type, RouteType routeType)
+        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string route, Type type, RouteType routeType)
         {
             lock (m_Cache)
             {
-                var key = Tuple.Create(localBoundedContext,remoteBoundedContext, endpoint,type,routeType );
+                var key = Tuple.Create(localBoundedContext,remoteBoundedContext, route,type,routeType );
                 Endpoint ep;
                 if (m_Cache.TryGetValue(key, out ep)) return ep;
 
-                if (m_EndpointProvider.Contains(endpoint))
+                if (m_EndpointProvider.Contains(route))
                 {
-                    ep = m_EndpointProvider.Get(endpoint);
+                    ep = m_EndpointProvider.Get(route);
                     m_Cache.Add(key, ep);
                     return ep;
                 }
 
-                ep=createEndpoint(localBoundedContext, remoteBoundedContext,  endpoint,type,routeType);
+                ep=createEndpoint(localBoundedContext, remoteBoundedContext,  route,type,routeType);
                 m_Cache.Add(key,ep);
                 return ep;
             }
         }
 
-        private Endpoint createEndpoint(string localBoundedContext, string remoteBoundedContext, string endpoint, Type type,RouteType routeType)
+        private Endpoint createEndpoint(string localBoundedContext, string remoteBoundedContext, string route, Type type,RouteType routeType)
         {
             m_SerializationFormat = "protobuf";
             string subscribe;
             if (routeType == RouteType.Commands)
             {
                 subscribe = remoteBoundedContext == localBoundedContext
-                    ? string.Format("{0}.queue.{1}.{2}", localBoundedContext, routeType.ToString().ToLower(), endpoint)
+                    ? string.Format("{0}.queue.{1}.{2}", localBoundedContext, routeType.ToString().ToLower(), route)
                     : null;
             }
             else
             {
-                subscribe = string.Format("{0}.queue.{1}.{2}.{3}", localBoundedContext, remoteBoundedContext , routeType.ToString().ToLower(), endpoint);
+                subscribe = string.Format("{0}.queue.{1}.{2}.{3}", localBoundedContext, remoteBoundedContext , routeType.ToString().ToLower(), route);
             }
             
             return new Endpoint
