@@ -294,7 +294,7 @@ namespace Inceptum.Cqrs
 
         public void SendCommand<T>(T command,string boundedContext,CommandPriority priority=CommandPriority.Normal )
         {
-            var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
+          /*  var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
             if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found",boundedContext),"boundedContext");
             string route;
@@ -302,7 +302,22 @@ namespace Inceptum.Cqrs
             {
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}",boundedContext,typeof(T),priority));
             }
-            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, typeof(T), RouteType.Commands), route);
+            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, typeof(T), RouteType.Commands), route);*/
+            SendCommand((object)command,boundedContext,priority);
+        }
+
+        public void SendCommand(object command,string boundedContext,CommandPriority priority=CommandPriority.Normal )
+        {
+            if (command == null) throw new ArgumentNullException("command");
+            var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
+            if (context == null)
+                throw new ArgumentException(string.Format("bound context {0} not found",boundedContext),"boundedContext");
+            string route;
+            if (!context.CommandRoutes.TryGetValue(Tuple.Create(command.GetType(), priority), out route))
+            {
+                throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}",boundedContext,command.GetType(),priority));
+            }
+            m_MessagingEngine.Send(command, m_EndpointResolver.Resolve(context.LocalBoundedContext, boundedContext, route, command.GetType(), RouteType.Commands), route);
         }
 
         public void ReplayEvents(string boundedContext, params Type[] types)

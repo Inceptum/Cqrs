@@ -339,7 +339,7 @@ namespace Inceptum.Cqrs.Tests
           
             //send command to remote BC
             messagingEngine.Expect(e => e.Send(
-                Arg<string>.Is.Equal("testCommand"),
+                Arg<object>.Is.Equal("testCommand"),
                 Arg<Endpoint>.Is.Anything,
                 Arg<string>.Is.Equal("remoteCommands")
                 ));
