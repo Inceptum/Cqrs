@@ -10,6 +10,7 @@ namespace Inceptum.Cqrs.Configuration
     internal class EventStoreDescriptor : IBoundedContextDescriptor
     {
         private readonly Func<IDispatchCommits, Wireup> m_ConfigureEventStore;
+        private IConstructAggregates m_ConstructAggregates;
 
         public EventStoreDescriptor(Func<IDispatchCommits, Wireup> configureEventStore)
         {
@@ -24,17 +25,15 @@ namespace Inceptum.Cqrs.Configuration
 
         public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            IStoreEvents eventStore = m_ConfigureEventStore(new CommitDispatcher(boundedContext.EventsPublisher)).Build();
-
-            boundedContext.EventStore = new NEventStoreAdapter(eventStore,
-                                                               resolver.HasService(typeof (IConstructAggregates))
-                                                                   ? (IConstructAggregates)resolver.GetService(typeof(IConstructAggregates))
-                                                                   : null);
+            m_ConstructAggregates = resolver.HasService(typeof (IConstructAggregates))
+                ? (IConstructAggregates)resolver.GetService(typeof(IConstructAggregates))
+                : null;
         }
 
         public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
-
+            IStoreEvents eventStore = m_ConfigureEventStore(new CommitDispatcher(boundedContext.EventsPublisher)).Build();
+            boundedContext.EventStore = new NEventStoreAdapter(eventStore, m_ConstructAggregates);
         }
     }
 }
