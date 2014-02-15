@@ -235,6 +235,11 @@ namespace Inceptum.Cqrs.Castle
             CqrsEngine.SendCommand(command,boundedContext,priority);
         }
 
+        public void SendCommand(object command, string boundedContext, CommandPriority priority = CommandPriority.Normal)
+        {
+            CqrsEngine.SendCommand(command, boundedContext, priority);
+        }
+
         public void ReplayEvents(string boundedContext, params Type[] types)
         {
             CqrsEngine.ReplayEvents(boundedContext, types);
