@@ -35,6 +35,7 @@ namespace Inceptum.Cqrs.Configuration
         private readonly string m_Name;
         private readonly bool m_IsLocal;
         private string m_LocalBoundedContext;
+        public bool HasEventStore { get; set; }
 
         public IEnumerable<Type> Dependencies
         {

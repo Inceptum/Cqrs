@@ -119,11 +119,13 @@ namespace Inceptum.Cqrs.Configuration
 
         public LocalBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
         {
+            HasEventStore = true;
             AddDescriptor(new EventStoreDescriptor(configureEventStore));
             return this;
         }
         public LocalBoundedContextRegistration WithEventStore(IEventStoreConnection eventStoreConnection)
         {
+            HasEventStore = true;
             AddDescriptor(new GetEventStoreDescriptor(eventStoreConnection));
             return this;
         }

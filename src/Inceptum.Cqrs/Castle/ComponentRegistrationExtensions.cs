@@ -21,7 +21,17 @@ namespace Castle.MicroKernel.Registration
                     CommandsHandlerFor = localBoundedContext,
                     IsCommandsHandler = true
                 });
+        } 
+    
+
+        public static ComponentRegistration<T> WithRepositoryAccess<T>(this ComponentRegistration<T> registration, string localBoundedContext) where T : class
+        {
+            return registration.ExtendedProperties(new
+                {
+                    DependsOnBoundedContextRepository = localBoundedContext,
+                });
         }  
+
         public static ComponentRegistration<T> AsSaga<T>(this ComponentRegistration<T> registration, params string[] boundedContexts) where T : class
         {
             return registration.ExtendedProperties(new
