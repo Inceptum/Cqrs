@@ -10,6 +10,8 @@ using Castle.Windsor;
 using Inceptum.Cqrs.Castle;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
+using Inceptum.Cqrs.Routing;
+using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using NUnit.Framework;
 using Rhino.Mocks;
@@ -331,7 +333,9 @@ namespace Inceptum.Cqrs.Tests
                 {"commandExchange", new Endpoint("test", "unistream.u1.commands", true, "json")},
                 {"commandQueue", new Endpoint("test", "unistream.u1.commands", true, "json")}
             };
-        public Endpoint Resolve(string localBoundedContext, string remoteBoundedContext, string route, Type type, RouteType routeType)
+     
+
+        public Endpoint Resolve(string route, RoutingKey key, IEndpointProvider endpointProvider)
         {
             return m_Endpoints[route];
         }

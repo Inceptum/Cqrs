@@ -24,6 +24,8 @@ namespace Inceptum.Cqrs.Configuration
         readonly Dictionary<Type, Func<object, Endpoint,string,CommandHandlingResult>> m_Handlers = new Dictionary<Type, Func<object, Endpoint,string, CommandHandlingResult>>();
         private readonly string m_BoundedContext;
         private readonly QueuedTaskScheduler m_QueuedTaskScheduler;
+
+        //TODO: same code is added to messaging engine. need to remove
         private readonly Dictionary<CommandPriority,TaskFactory> m_TaskFactories=new Dictionary<CommandPriority, TaskFactory>();
         private static long m_FailedCommandRetryDelay = 60000;
         readonly Logger m_Logger= LogManager.GetCurrentClassLogger();

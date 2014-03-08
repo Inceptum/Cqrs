@@ -66,7 +66,7 @@ namespace Inceptum.Cqrs.Configuration
     {
         public string BoundedContextName { get; private set; }
         private readonly List<IBoundedContextDescriptor> m_Descriptors = new List<IBoundedContextDescriptor>();
-        private Type[] m_Dependencies;
+        private Type[] m_Dependencies=new Type[0];
 
         public BoundedContextRegistration1(string boundedContextName)
         {
@@ -107,7 +107,7 @@ namespace Inceptum.Cqrs.Configuration
 
         void IRegistration.Create(CqrsEngine cqrsEngine)
         {
-            var boundedContext = new BoundedContext(cqrsEngine, BoundedContextName);
+            var boundedContext = new BoundedContext(cqrsEngine, BoundedContextName, 1, 60000, true, BoundedContextName);
             foreach (var descriptor in m_Descriptors)
             {
                 descriptor.Create(boundedContext, cqrsEngine.DependencyResolver);
@@ -123,6 +123,31 @@ namespace Inceptum.Cqrs.Configuration
             {
                 descriptor.Process(boundedContext, cqrsEngine);
             }
+        }
+
+        public BoundedContextRegistration1 WithCommandsHandler(object handler)
+        {
+            if (handler == null) throw new ArgumentNullException("handler");
+            AddDescriptor(new CommandsHandlerDescriptor(handler));
+            return this;
+        }
+        public BoundedContextRegistration1 WithCommandsHandler<T>()
+        {
+            AddDescriptor(new CommandsHandlerDescriptor(typeof(T)));
+            return this;
+        }
+
+        public BoundedContextRegistration1 WithCommandsHandlers(params Type[] handlers)
+        {
+            AddDescriptor(new CommandsHandlerDescriptor(handlers));
+            return this;
+        }
+
+        public BoundedContextRegistration1 WithCommandsHandler(Type handler)
+        {
+            if (handler == null) throw new ArgumentNullException("handler");
+            AddDescriptor(new CommandsHandlerDescriptor(handler));
+            return this;
         }
 
         IEnumerable<Type> IRegistration.Dependencies
@@ -148,7 +173,7 @@ namespace Inceptum.Cqrs.Configuration
 
         public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            boundedContext.RouteMap[m_Route].ConcurrencyLevel = m_ThreadCount;
+            boundedContext.Routes[m_Route].ConcurrencyLevel = m_ThreadCount;
         }
 
         public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
@@ -170,6 +195,7 @@ namespace Inceptum.Cqrs.Configuration
 
         public PublishingEventsDescriptor(BoundedContextRegistration1 registration, Type[] types) : base(registration)
         {
+            Descriptor = this;
             Types = types;
         }
 
@@ -180,22 +206,15 @@ namespace Inceptum.Cqrs.Configuration
 
         public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            foreach (var eventType in Types)
-            {
-                boundedContext.RouteMap[Route].AddRoute(new RoutingKey
-                {
-                    LocalBoundedContext = boundedContext.Name,
-                    RemoteBoundContext = null,
-                    MessageType = eventType,
-                    RouteType = RouteType.Events,
-                    Priority = 0
-                }, (IEndpointResolver) resolver.GetService(typeof (IEndpointResolver)));
-            }
+           
         }
 
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
-
+            foreach (var eventType in Types)
+            {
+                boundedContext.Routes[Route].AddPublishedEvent(eventType, 0, cqrsEngine.EndpointResolver);
+            }
         }
     }
 
@@ -217,21 +236,15 @@ namespace Inceptum.Cqrs.Configuration
 
         public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            foreach (var type in m_CommandsTypes)
-            {
-                boundedContext.RouteMap[Route].AddRoute(new RoutingKey
-                {
-                    LocalBoundedContext = boundedContext.Name,
-                    RemoteBoundContext = m_BoundedContext,
-                    MessageType = type,
-                    RouteType = RouteType.Commands,
-                    Priority = 0
-                },(IEndpointResolver) resolver.GetService(typeof(IEndpointResolver)));
-            }
+             
         }
 
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
-        {
+        {            foreach (var type in m_CommandsTypes)
+            {
+                boundedContext.Routes[Route].AddPublishedCommand(type, 0, m_BoundedContext,cqrsEngine.EndpointResolver);
+            }
+
         }
 
         public IPublishingRouteDescriptor<PublishingCommandsDescriptor> To(string boundedContext)
@@ -269,16 +282,8 @@ namespace Inceptum.Cqrs.Configuration
             {
                 for (uint priority = 0; priority <= LowestPriority; priority++)
                 {
-                    var routingKey = new RoutingKey
-                    {
-                        LocalBoundedContext = boundedContext.Name,
-                        RemoteBoundContext = null,
-                        MessageType = type,
-                        RouteType = RouteType.Commands,
-                        Priority = priority
-                    };
                     var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
-                    boundedContext.RouteMap[Route].AddRoute(routingKey, endpointResolver);
+                    boundedContext.Routes[Route].AddSubscribedCommand(type, priority, endpointResolver);
                 }
             }
         }
@@ -310,21 +315,14 @@ namespace Inceptum.Cqrs.Configuration
 
         public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            foreach (var type in m_Types)
-            {
-                boundedContext.RouteMap[Route].AddRoute(new RoutingKey
-                {
-                    LocalBoundedContext = boundedContext.Name,
-                    RemoteBoundContext = m_BoundedContext,
-                    MessageType = type,
-                    RouteType = RouteType.Events,
-                    Priority = 0
-                }, (IEndpointResolver) resolver.GetService(typeof (IEndpointResolver)));
-            }
         }
 
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
+            foreach (var type in m_Types)
+            {
+                boundedContext.Routes[Route].AddSubscribedEvent(type, 0,m_BoundedContext,cqrsEngine.EndpointResolver);
+            }
         }
     }
 
@@ -489,6 +487,26 @@ namespace Inceptum.Cqrs.Configuration
         void IRegistration.Process(CqrsEngine cqrsEngine)
         {
             (m_Registration as IRegistration).Process(cqrsEngine);
+        }
+
+        public BoundedContextRegistration1 WithCommandsHandler(object handler)
+        {
+            return m_Registration.WithCommandsHandler(handler);
+        }
+
+        public BoundedContextRegistration1 WithCommandsHandler<T>()
+        {
+            return m_Registration.WithCommandsHandler<T>();
+        }
+
+        public BoundedContextRegistration1 WithCommandsHandlers(params Type[] handlers)
+        {
+            return m_Registration.WithCommandsHandlers(handlers);
+        }
+
+        public BoundedContextRegistration1 WithCommandsHandler(Type handler)
+        {
+            return m_Registration.WithCommandsHandler(handler);
         }
 
         IEnumerable<Type> IRegistration.Dependencies

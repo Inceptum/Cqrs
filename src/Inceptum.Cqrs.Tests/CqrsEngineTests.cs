@@ -208,9 +208,10 @@ namespace Inceptum.Cqrs.Tests
                 var commandHandler = new CommandHandler();
                 using (var engine = new CqrsEngine(messagingEngine,
                                                    new InMemoryEndpointResolver(),
-                                                   LocalBoundedContext.Named("bc")
-                                                                      .PublishingEvents(typeof (int)).To("eventExchange").RoutedTo("eventQueue")
-                                                                      .ListeningCommands(typeof (string)).On("exchange1").On("exchange2").RoutedFrom("commandQueue")
+                                                   LocalBoundedContext.Named1("bc")
+                                                                      .PublishingEvents(typeof (int)).With("eventExchange").WithLoopback("eventQueue")
+                                                                      .ListeningCommands(typeof (string)).On("exchange1").WithLoopback("commandQueue")
+                                                                      .ListeningCommands(typeof (string)).On("exchange2").WithLoopback("commandQueue")
                                                                       .WithCommandsHandler(commandHandler))
                     )
                 {
@@ -265,7 +266,7 @@ namespace Inceptum.Cqrs.Tests
         [Test]
         public void NewFluentApiPrototypeTest()
         {
-            new CqrsEngine(null,MockRepository.GenerateMock<IEndpointProvider>(),
+            new CqrsEngine(null,MockRepository.GenerateMock<IEndpointResolver>(),
                 LocalBoundedContext.Named1("bc")
                     .PublishingCommands(typeof(string)).To("operations").With("operationsCommandsRoute")
                     .ListeningEvents(typeof(int)).From("operations").On("operationEventsRoute")
@@ -641,10 +642,10 @@ namespace Inceptum.Cqrs.Tests
         public void ReplayEventsRmqTest()
         {
             var endpointResolver = MockRepository.GenerateMock<IEndpointResolver>();
-            endpointResolver.Expect(r => r.Resolve("local","local", "commands", typeof(string),RouteType.Commands)).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootNameChangedEvent),RouteType.Events)).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
-            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootCreatedEvent),RouteType.Events)).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
-
+        /*    endpointResolver.Expect(r => r.Resolve("local","local", "commands", typeof(string),CommunicationType.Commands)).Return(new Endpoint("rmq", "commandsExchange", "commands", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootNameChangedEvent),CommunicationType.Events)).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+            endpointResolver.Expect(r => r.Resolve("local", "local", "events", typeof(TestAggregateRootCreatedEvent),CommunicationType.Events)).Return(new Endpoint("rmq", "eventsExchange", "events", true, "json"));
+*/
 
             var transports = new Dictionary<string, TransportInfo> { { "rmq", new TransportInfo("localhost", "guest", "guest", null, "RabbitMq") } };
             var messagingEngine = new MessagingEngine(new TransportResolver(transports), new RabbitMqTransportFactory());

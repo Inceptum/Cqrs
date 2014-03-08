@@ -207,7 +207,7 @@ namespace Inceptum.Cqrs.Castle
         {
         }
 
-        public void SendCommand<T>(T command, string boundedContext, CommandPriority priority = CommandPriority.Normal)
+        public void SendCommand<T>(T command, string boundedContext, uint priority = 0)
         {
             CqrsEngine.SendCommand(command,boundedContext,priority);
         }

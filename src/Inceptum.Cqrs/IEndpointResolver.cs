@@ -8,10 +8,16 @@ using Inceptum.Messaging.Contract;
 
 namespace Inceptum.Cqrs
 {
+
     public enum RouteType
     {
         Commands,
         Events
+    }
+    public enum CommunicationType
+    {
+        Publish,
+        Subscribe,
     }
     public interface IEndpointResolver
     {
