@@ -88,31 +88,7 @@ namespace Inceptum.Cqrs
                 };
             }
             return default(Endpoint);
-/*
 
-            string subscribe;
-            if (key.RouteType == RouteType.Commands)
-            {
-                subscribe = key.RemoteBoundedContext == key.LocalBoundedContext 
-                    ? string.Format("{0}.queue.{1}.{2}", key.LocalBoundedContext, key.CommunicationType.ToString().ToLower(), route)
-                    : null;
-            }
-            else
-            {
-                subscribe = string.Format("{0}.queue.{1}.{2}.{3}", key.LocalBoundedContext, key.RemoteBoundedContext, key.CommunicationType.ToString().ToLower(), route);
-            }
-
-            return new Endpoint
-            {
-                Destination = new Destination
-                {
-                    Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.CommunicationType.ToString().ToLower(), key.MessageType.Name),
-                    Subscribe = subscribe
-                },
-                SerializationFormat = m_SerializationFormat,
-                SharedDestination = true,
-                TransportId = m_Transport
-            };*/
         }
         public Endpoint Resolve(string route, RoutingKey key, IEndpointProvider endpointProvider)
         {

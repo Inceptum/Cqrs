@@ -97,7 +97,7 @@ namespace Inceptum.Cqrs.Tests
         {
             using (var container = new WindsorContainer())
             {
-                container.AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(LocalBoundedContext.Named("bc")));
+                container.AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")));
                 container.Register(Component.For<CommandsHandler>().AsCommandsHandler("bc").AsProjection("bc", "remote"));
             }
         }
@@ -149,7 +149,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container.Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
                     .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(
-                            LocalBoundedContext.Named("local").ListeningEvents(typeof(string)).From("remote").On("remoteEVents")
+                            BoundedContext.Named("local").ListeningEvents(typeof(string)).From("remote").On("remoteEVents")
                             ))
                     .Register(Component.For<EventListener>().AsProjection("local", "remote"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
@@ -169,7 +169,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(LocalBoundedContext.Named("bc")))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc").LifestyleSingleton())
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
@@ -190,7 +190,7 @@ namespace Inceptum.Cqrs.Tests
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(messagingEngine))
                     .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(
-                        LocalBoundedContext.Named("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback())
+                        BoundedContext.Named("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback())
                             )
                     .Register(Component.For<EventListenerWithICommandSenderDependency>().AsSaga("bc"))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
@@ -213,7 +213,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(LocalBoundedContext.Named("bc")))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
@@ -241,7 +241,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(LocalBoundedContext.Named("bc")))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
@@ -273,7 +273,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(LocalBoundedContext.Named("bc").FailedCommandRetryDelay(100)))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc").FailedCommandRetryDelay(100)))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
@@ -292,30 +292,61 @@ namespace Inceptum.Cqrs.Tests
             }
         }
 
-
-        public void SyntaxTest()
+        [Test]
+        public void SagaTest()
         {
             using (var container = new WindsorContainer())
             {
                 container.Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()));
                 container.AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(
-                    LocalBoundedContext.Named("local")
-                        .PublishingEvents(typeof (int)).With("events").WithLoopback()
+                    BoundedContext.Named("bc1")
+                        .PublishingEvents(typeof (int)).With("events1").WithLoopback()
                         .ListeningCommands(typeof(string)).On("commands1").WithLoopback()
-                        .ListeningCommands(typeof(DateTime)).On("commands2").WithLoopback()
                         .WithCommandsHandler<CommandHandler>(),
-                    LocalBoundedContext.Named("projections")));
+                    BoundedContext.Named("bc2")
+                        .PublishingEvents(typeof (int)).With("events2").WithLoopback()
+                        .ListeningCommands(typeof(string)).On("commands2").WithLoopback()
+                        .WithCommandsHandler<CommandHandler>(),
+                    BoundedContext.Named("sagaHost")
+                        .ListeningEvents(typeof(int)).From("bc1").On("events1")
+                        .ListeningEvents(typeof(int)).From("bc2").On("events2")
+                        .PublishingCommands(typeof(string)).To("bc2").With("commands2")
+                        ));
 
                 container.Register(
-                    Component.For<TestSaga>().AsSaga("local", "projections"),
-                    Component.For<CommandHandler>().AsCommandsHandler("local"),
-                    Component.For<EventsListener>().AsProjection("projections", "local")
+                    Component.For<CommandHandler>(),
+                    Component.For<TestSaga>().AsSaga("sagaHost", "bc1", "bc2")
                     );
+
+                container.Resolve<ICqrsEngineBootstrapper>().Start();
+
+                var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
+                cqrsEngine.SendCommand("cmd","bc1","bc1");
+
+                Assert.That(TestSaga.Complete.WaitOne(1000),Is.True,"Saga has not got events or failed to send command");
             }
         }
 
 
     }
+
+
+    public class TestSaga
+    {
+        public static List<string> Messages=new List<string>();
+        public static ManualResetEvent Complete=new ManualResetEvent(false);
+        private void Handle(int @event, ICommandSender engine, string boundedContext)
+        {
+            var message = string.Format("Event from {0} is caught by saga:{1}", boundedContext, @event);
+            Messages.Add(message);
+            if(boundedContext=="bc1")
+                engine.SendCommand("cmd", "sagaHost", "bc2");
+            if (boundedContext == "bc2")
+                Complete.Set();
+            Console.WriteLine(message);
+        }
+    }
+
 
     public class EventListenerWithICommandSenderDependency
     {
@@ -347,59 +378,5 @@ namespace Inceptum.Cqrs.Tests
             return m_Endpoints[route];
         }
     }
-
- /*
-
-    internal class Transfer
-    {
-        public Guid Id { get; set; }
-        public string Code { get; set; }
-        public DateTime CreationDate { get; set; }
-    }
-
-    public class TransferCreatedEvent
-    {
-        public Guid Id { get; set; }
-        public string Code { get; set; }
-    }
-
-    public class TransferRegisteredInLigacyProcessingEvent
-    {
-        public Guid Id { get; set; }
-        public DateTime CreationDate { get; set; }
-    }
-
-    public class TestCommand
-    {
-
-    }
-
-
-    internal class TransferProjection
-    {
-        private readonly Dictionary<Guid, Transfer> m_Transfers= new Dictionary<Guid, Transfer>();
-
-        public void Handle(TransferCreatedEvent e)
-        {
-            Transfer transfer;
-            if (!m_Transfers.TryGetValue(e.Id, out transfer))
-            {
-                transfer= new Transfer { Id = e.Id };
-                m_Transfers.Add(e.Id, transfer);
-            }
-            transfer.Code = e.Code;
-        }
-
-        public void Handle(TransferRegisteredInLigacyProcessingEvent e)
-        {
-            Transfer transfer;
-            if (!m_Transfers.TryGetValue(e.Id, out transfer))
-            {
-                transfer= new Transfer { Id = e.Id };
-                m_Transfers.Add(e.Id, transfer);
-            }
-            transfer.CreationDate = e.CreationDate;
-        }
-    }
-*/
+ 
 }

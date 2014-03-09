@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Inceptum.Cqrs.Configuration;
 using Inceptum.Messaging.Contract;
 using NLog;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs
 {
     internal class EventDispatcher
     {

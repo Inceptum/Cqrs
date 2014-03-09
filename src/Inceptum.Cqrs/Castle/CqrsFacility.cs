@@ -43,7 +43,6 @@ namespace Inceptum.Cqrs.Castle
         private readonly string m_EngineComponetName = Guid.NewGuid().ToString();
         private readonly Dictionary<IHandler, Action<IHandler>> m_WaitList = new Dictionary<IHandler, Action<IHandler>>();
         private IBoundedContextRegistration[] m_BoundedContexts = new IBoundedContextRegistration[0];
-        private readonly List<SagaRegistration> m_Sagas = new List<SagaRegistration>();
         private bool m_InMemory=false;
         private static bool m_CreateMissingEndpoints = false;
 
@@ -89,7 +88,7 @@ namespace Inceptum.Cqrs.Castle
         {
             if (handler.ComponentModel.Name == m_EngineComponetName)
             {
-                var dependencyModels = m_BoundedContexts.Cast<IRegistration>().Concat(m_Sagas).SelectMany(bc => bc.Dependencies).Select(d => new DependencyModel(d.Name, d, false));
+                var dependencyModels = m_BoundedContexts.Cast<IRegistration>().SelectMany(bc => bc.Dependencies).Select(d => new DependencyModel(d.Name, d, false));
                 foreach (var dependencyModel in dependencyModels)
                 {
                     handler.ComponentModel.Dependencies.Add(dependencyModel);
@@ -111,7 +110,7 @@ namespace Inceptum.Cqrs.Castle
                 var boundContext = (string)(handler.ComponentModel.ExtendedProperties["BoundContext"]);
                 var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == boundContext);
                 if (registration == null)
-                    throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", projectedBoundContext));
+                    throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
                
                 //TODO: decide which service to use
                 registration.WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext);
@@ -134,7 +133,12 @@ namespace Inceptum.Cqrs.Castle
             if (isSaga)
             {
                 var listenedBoundContexts = (string[])(handler.ComponentModel.ExtendedProperties["ListenedBoundContexts"]);
-                m_Sagas.Add(Saga.OfType(handler.ComponentModel.Services.First()).Listening(listenedBoundContexts));
+                var boundContext = (string)(handler.ComponentModel.ExtendedProperties["BoundContext"]);
+                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == boundContext);
+                if (registration == null)
+                    throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
+                registration.WithSaga(handler.ComponentModel.Services.First(), listenedBoundContexts);
+
             }
 
             if (isProcess)
@@ -156,7 +160,7 @@ namespace Inceptum.Cqrs.Castle
             Kernel.Register(Component.For<IDependencyResolver>().ImplementedBy<CastleDependencyResolver>());
             Kernel.Register(engineReg.Named(m_EngineComponetName).DependsOn(new
                 {
-                    registrations = m_BoundedContexts.Cast<IRegistration>().Concat(m_Sagas).ToArray()
+                    registrations = m_BoundedContexts.Cast<IRegistration>().ToArray()
                 }));
             Kernel.Register(
                 Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new {kernel = Kernel}));

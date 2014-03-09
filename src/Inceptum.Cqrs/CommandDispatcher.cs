@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading.Tasks;
+using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
-using Inceptum.Cqrs.Utils;
 using Inceptum.Messaging.Contract;
 using NLog;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs
 {
     //TODO: rename to EventHandlingResult
     public class CommandHandlingResult

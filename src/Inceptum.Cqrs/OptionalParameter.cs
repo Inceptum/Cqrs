@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs
 {
     abstract class OptionalParameter
     {

@@ -4,38 +4,39 @@ namespace Castle.MicroKernel.Registration
 {
     public static class ComponentRegistrationExtensions
     {
-        public static ComponentRegistration<T> AsProjection<T>(this ComponentRegistration<T> registration, string boundContext,string projectedBoundContext) where T : class
+        public static ComponentRegistration<T> AsProjection<T>(this ComponentRegistration<T> registration, string hostingBoundContext,string projectedBoundContext) where T : class
         {
             return registration.ExtendedProperties(new
                 {
                     IsProjection = true,
                     ProjectedBoundContext = projectedBoundContext,
-                    BoundContext = boundContext
+                    BoundContext = hostingBoundContext
                 });
         }  
         
-        public static ComponentRegistration<T> AsCommandsHandler<T>(this ComponentRegistration<T> registration, string localBoundedContext) where T : class
+        public static ComponentRegistration<T> AsCommandsHandler<T>(this ComponentRegistration<T> registration, string boundedContext) where T : class
         {
             return registration.ExtendedProperties(new
                 {
-                    CommandsHandlerFor = localBoundedContext,
+                    CommandsHandlerFor = boundedContext,
                     IsCommandsHandler = true
                 });
-        }  
-        public static ComponentRegistration<T> AsSaga<T>(this ComponentRegistration<T> registration, params string[] boundedContexts) where T : class
+        }
+        public static ComponentRegistration<T> AsSaga<T>(this ComponentRegistration<T> registration, string hostingBoundContext, params string[] boundedContexts) where T : class
         {
             return registration.ExtendedProperties(new
                 {
                     ListenedBoundContexts = boundedContexts,
-                    IsSaga = true
+                    IsSaga = true,
+                    BoundContext = hostingBoundContext
                 });
         }
 
-        public static ComponentRegistration<T> AsProcess<T>(this ComponentRegistration<T> registration, string localBoundedContext) where T : class
+        public static ComponentRegistration<T> AsProcess<T>(this ComponentRegistration<T> registration, string hostingBoundContext) where T : class
         {
             return registration.ExtendedProperties(new
                 {
-                    ProcessFor = localBoundedContext,
+                    ProcessFor = hostingBoundContext,
                     IsProcess = true
                 });
         }

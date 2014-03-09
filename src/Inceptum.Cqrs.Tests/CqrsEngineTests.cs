@@ -182,7 +182,7 @@ namespace Inceptum.Cqrs.Tests
                 var commandHandler = new CommandHandler();
                 using (var engine = new CqrsEngine(messagingEngine,
                                                    new InMemoryEndpointResolver(),
-                                                   LocalBoundedContext.Named("bc")
+                                                   BoundedContext.Named("bc")
                                                                       .PublishingEvents(typeof (int)).With("eventExchange").WithLoopback("eventQueue")
                                                                       .ListeningCommands(typeof (string)).On("exchange1").WithLoopback("commandQueue")
                                                                       .ListeningCommands(typeof (string)).On("exchange2").WithLoopback("commandQueue")
@@ -225,7 +225,7 @@ namespace Inceptum.Cqrs.Tests
                 
             
             new CqrsEngine(messagingEngine,new InMemoryEndpointResolver(),endpointProvider,
-                LocalBoundedContext.Named("bc")
+                BoundedContext.Named("bc")
                     .PublishingCommands(typeof(string)).To("operations").With("operationsCommandsRoute")
                     .ListeningEvents(typeof(int)).From("operations").On("operationEventsRoute")
                     .ListeningCommands(typeof(string)).On("commandsRoute")
@@ -277,7 +277,7 @@ namespace Inceptum.Cqrs.Tests
                 var commandHandler = new CommandHandler(100);
                 using (var engine = new CqrsEngine(messagingEngine,
                                                    new InMemoryEndpointResolver(),endpointProvider,
-                                                   LocalBoundedContext.Named("bc")
+                                                   BoundedContext.Named("bc")
                                                     .PublishingEvents(typeof (int)).With("eventExchange").WithLoopback("eventQueue")
                                                     .ListeningCommands(typeof(string)).On("commandsRoute")
                                                         .Prioritized(lowestPriority: 1)
@@ -285,7 +285,7 @@ namespace Inceptum.Cqrs.Tests
                                                             .WithEndpoint("exchange2").For(key => key.Priority == 0)
                                                     .ProcessingOptions("commandsRoute").MultiThreaded(2)
                                                     .WithCommandsHandler(commandHandler)/*,
-                                                   LocalBoundedContext.Named("bc").ConcurrencyLevel(1)
+                                                   BoundedContext.Named("bc").ConcurrencyLevel(1)
                                                                       .PublishingEvents(typeof (int)).To("eventExchange").RoutedTo("eventQueue")
                                                                       .ListeningCommands(typeof (string))
                                                                             .On("exchange1", CommandPriority.Low)
@@ -366,7 +366,7 @@ namespace Inceptum.Cqrs.Tests
 
             using (var ce=new CqrsEngine(messagingEngine,
                     new RabbitMqConventionEndpointResolver("tr1", "protobuf", endpointProvider),
-                    LocalBoundedContext.Named("operations")
+                    BoundedContext.Named("operations")
                         .PublishingEvents(typeof (bool) ).With("localEvents").WithLoopback()
                         .ListeningCommands(typeof(string), typeof(DateTime)).On("localCommands").WithLoopback()
                         .ListeningEvents(typeof(int), typeof(long)).From("integration").On("remoteEvents")
@@ -401,7 +401,7 @@ namespace Inceptum.Cqrs.Tests
                                                                    new IPEndPoint(IPAddress.Loopback, 1113));
             eventStoreConnection.Connect();
             using (var engine = new InMemoryCqrsEngine(
-                LocalBoundedContext.Named("local")
+                BoundedContext.Named("local")
                                    .PublishingEvents(typeof (int), typeof (TestAggregateRootNameChangedEvent),
                                                      typeof (TestAggregateRootCreatedEvent))
                                    .To("events")
@@ -486,7 +486,7 @@ namespace Inceptum.Cqrs.Tests
 
             var log = MockRepository.GenerateMock<ILog>();
             var eventsListener = new EventsListener();
-            var localBoundedContext = LocalBoundedContext.Named("local")
+            var localBoundedContext = BoundedContext.Named("local")
                                     .PublishingEvents(typeof (TestAggregateRootNameChangedEvent), typeof (TestAggregateRootCreatedEvent)).With("events").WithLoopback()
                                     .ListeningCommands(typeof (string)).On("commands1").WithLoopback()
                                     .WithCommandsHandler<EsCommandHandler>();
@@ -509,7 +509,7 @@ namespace Inceptum.Cqrs.Tests
 
             using (var engine = new InMemoryCqrsEngine(localBoundedContext,
 
-                LocalBoundedContext.Named("projections")
+                BoundedContext.Named("projections")
                             .ListeningEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).From("local").On("events")
                             .WithProjection(eventsListener, "local")))
             {
@@ -540,7 +540,7 @@ namespace Inceptum.Cqrs.Tests
 
 
             var eventsListener = new EventsListener();
-            var localBoundedContext = LocalBoundedContext.Named("local")
+            var localBoundedContext = BoundedContext.Named("local")
                 .PublishingEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).With("events").WithLoopback()
                 .ListeningCommands(typeof(string)).On("commands").WithLoopback()
                 .ListeningInfrastructureCommands().On("commands").WithLoopback()
@@ -556,7 +556,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 using (
                     var engine = new CqrsEngine(messagingEngine, endpointResolver, localBoundedContext,
-                        LocalBoundedContext.Named("projections").WithProjection(eventsListener, "local")))
+                        BoundedContext.Named("projections").WithProjection(eventsListener, "local")))
                 {
                     var guid=Guid.NewGuid();
                     engine.SendCommand(guid + ":create", "local", "local");
@@ -582,7 +582,7 @@ namespace Inceptum.Cqrs.Tests
         {
             var log = MockRepository.GenerateMock<ILog>();
             var eventsListener = new EventsListener();
-            var localBoundedContext = LocalBoundedContext.Named("local")
+            var localBoundedContext = BoundedContext.Named("local")
                 .PublishingEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).With("events").WithLoopback()
                 .ListeningCommands(typeof(string)).On("commands").WithLoopback()
                 .ListeningInfrastructureCommands().On("commands").WithLoopback()
@@ -597,7 +597,7 @@ namespace Inceptum.Cqrs.Tests
 
                 using (
                     var engine = new InMemoryCqrsEngine(localBoundedContext,
-                        LocalBoundedContext.Named("projections")
+                        BoundedContext.Named("projections")
                         .ListeningEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).From("local").On("events")
                             .WithProjection(eventsListener, "local")
                             .PublishingInfrastructureCommands().To("local").With("commands")))
@@ -630,14 +630,6 @@ namespace Inceptum.Cqrs.Tests
         public void Dispose()
         {
             Console.WriteLine("Test process disposed");
-        }
-    }
-
-    public class TestSaga
-    {
-        private void Handle(int @event , ICommandSender engine, string boundedContext)
-        {
-            Console.WriteLine("Event cought by saga:"+@event);
         }
     }
 

@@ -2,11 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.Routing;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs
 {
     public interface IRouteMap:IEnumerable<Route>
     {
@@ -18,7 +19,7 @@ namespace Inceptum.Cqrs.Configuration
     {
         public static IBoundedContextRegistration Named(string name)
         {
-            return new BoundedContextRegistration1(name);
+            return new BoundedContextRegistration(name);
         }
 
         private readonly Dictionary<string,Route> m_RouteMap =new Dictionary<string, Route>();
@@ -29,19 +30,13 @@ namespace Inceptum.Cqrs.Configuration
         internal List<IProcess> Processes { get; private set; }
         internal IEventStoreAdapter EventStore { get; set; }
         readonly Dictionary<string,Destination> m_TempDestinations=new Dictionary<string, Destination>();
-        internal string Name { get; set; }
-        internal int ThreadCount { get; set; }
+        internal string Name { get; private set; }
         internal long FailedCommandRetryDelay { get; set; }
-        internal bool IsLocal { get; private set; }
-        internal string LocalBoundedContext { get; private set; }
 
-        internal BoundedContext(CqrsEngine cqrsEngine, string name, int threadCount, long failedCommandRetryDelay, bool isLocal, string localBoundedContext)
+        internal BoundedContext(CqrsEngine cqrsEngine, string name, long failedCommandRetryDelay)
         {
        
-            ThreadCount = threadCount;
             FailedCommandRetryDelay = failedCommandRetryDelay;
-            IsLocal = isLocal;
-            LocalBoundedContext = localBoundedContext;
             Name = name;
             EventsPublisher = new EventsPublisher(cqrsEngine, this);
             CommandDispatcher = new CommandDispatcher(Name,  failedCommandRetryDelay);
@@ -73,13 +68,12 @@ namespace Inceptum.Cqrs.Configuration
             get { return this;}
         }
 
-        internal Route[] ResolveRoutes(IEndpointProvider endpointProvider)
+        internal void ResolveRoutes(IEndpointProvider endpointProvider)
         {
             foreach (var route in m_RouteMap.Values)
             {
                 route.Resolve(endpointProvider);
             }
-            return m_RouteMap.Values.Where(route => route.Type!=null).ToArray();
         }
         Route IRouteMap.this[string name]
         {
