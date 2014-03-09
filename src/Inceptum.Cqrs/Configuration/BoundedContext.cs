@@ -23,11 +23,6 @@ namespace Inceptum.Cqrs.Configuration
 
         private readonly Dictionary<string,Route> m_RouteMap =new Dictionary<string, Route>();
 
-
-        internal Dictionary<Type, string> EventRoutes { get; set; }
-        internal Dictionary<string, IEnumerable<Type>> EventsSubscriptions { get; set; }
-        internal List<CommandSubscription> CommandsSubscriptions { get; set; }
-        internal Dictionary<Tuple<Type, CommandPriority>, string> CommandRoutes { get; set; }
         internal EventsPublisher EventsPublisher { get; private set; }
         internal CommandDispatcher CommandDispatcher { get; private set; }
         internal EventDispatcher EventDispatcher { get; private set; }
@@ -49,7 +44,7 @@ namespace Inceptum.Cqrs.Configuration
             LocalBoundedContext = localBoundedContext;
             Name = name;
             EventsPublisher = new EventsPublisher(cqrsEngine, this);
-            CommandDispatcher = new CommandDispatcher(Name, threadCount, failedCommandRetryDelay);
+            CommandDispatcher = new CommandDispatcher(Name,  failedCommandRetryDelay);
             EventDispatcher = new EventDispatcher(Name);
             Processes = new List<IProcess>();
         }

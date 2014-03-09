@@ -5,8 +5,8 @@ namespace Inceptum.Cqrs
 {
     public interface ICommandSender : IDisposable
     {
-        void SendCommand<T>(T command, string boundedContext, uint  priority=0);
-        void ReplayEvents(string boundedContext, params Type[] types);
+        void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext,uint  priority=0);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types);
     }
 
 /*

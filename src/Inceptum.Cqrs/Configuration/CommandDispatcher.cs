@@ -23,23 +23,13 @@ namespace Inceptum.Cqrs.Configuration
     {
         readonly Dictionary<Type, Func<object, Endpoint,string,CommandHandlingResult>> m_Handlers = new Dictionary<Type, Func<object, Endpoint,string, CommandHandlingResult>>();
         private readonly string m_BoundedContext;
-        private readonly QueuedTaskScheduler m_QueuedTaskScheduler;
 
-        //TODO: same code is added to messaging engine. need to remove
-        private readonly Dictionary<CommandPriority,TaskFactory> m_TaskFactories=new Dictionary<CommandPriority, TaskFactory>();
-        private static long m_FailedCommandRetryDelay = 60000;
         readonly Logger m_Logger= LogManager.GetCurrentClassLogger();
-        public CommandDispatcher(string boundedContext, int threadCount=1,long failedCommandRetryDelay = 60000)
+        private long m_FailedCommandRetryDelay;
+
+        public CommandDispatcher(string boundedContext, long failedCommandRetryDelay = 60000)
         {
             m_FailedCommandRetryDelay = failedCommandRetryDelay;
-            m_QueuedTaskScheduler = new QueuedTaskScheduler(threadCount);
-            foreach (var value in Enum.GetValues(typeof(CommandPriority)))
-            {
-                m_TaskFactories[(CommandPriority) value] = new TaskFactory(
-                    ((CommandPriority) value) == CommandPriority.Normal
-                        ? new CurrentThreadTaskScheduler()
-                        : m_QueuedTaskScheduler.ActivateNewQueue((int) value));
-            }
             m_BoundedContext = boundedContext;
         }
 
@@ -127,7 +117,7 @@ namespace Inceptum.Cqrs.Configuration
             m_Handlers.Add(handledType, lambda.Compile());
         }
 
-        public void Dispatch(object command, CommandPriority priority, AcknowledgeDelegate acknowledge, Endpoint commandOriginEndpoint,string route)
+        public void Dispatch(object command, AcknowledgeDelegate acknowledge, Endpoint commandOriginEndpoint,string route)
         {
             Func<object, Endpoint, string, CommandHandlingResult> handler;
             if (!m_Handlers.TryGetValue(command.GetType(), out handler))
@@ -138,7 +128,7 @@ namespace Inceptum.Cqrs.Configuration
                 return;
             }
 
-            m_TaskFactories[priority].StartNew(() => handle(command, acknowledge, handler,commandOriginEndpoint,route));
+              handle(command, acknowledge, handler,commandOriginEndpoint,route);
         }
 
         private void handle(object command, AcknowledgeDelegate acknowledge, Func<object, Endpoint, string, CommandHandlingResult> handler, Endpoint commandOriginEndpoint,string route)
@@ -157,7 +147,6 @@ namespace Inceptum.Cqrs.Configuration
 
         public void Dispose()
         {
-            m_QueuedTaskScheduler.Dispose();
         }
     }
 }

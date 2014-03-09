@@ -106,7 +106,7 @@
     <Compile Include="CommitDispatcher.cs" />
     <Compile Include="Castle\ComponentRegistrationExtensions.cs" />
     <Compile Include="Configuration\BoundedContext.cs" />
-    <Compile Include="Configuration\BoundedContextRegistration.cs" />
+    <Compile Include="Configuration\IRegistration.cs" />
     <Compile Include="Configuration\CommandDispatcher.cs" />
     <Compile Include="Configuration\CommandsHandlerDescriptor.cs" />
     <Compile Include="Configuration\GetEventStoreDescriptor.cs" />
@@ -125,14 +125,9 @@
     <Compile Include="IProcess.cs" />
     <Compile Include="IEventPublisher.cs" />
     <Compile Include="Configuration\LocalBoundedContext.cs" />
-    <Compile Include="Configuration\LocalBoundedContextRegistration.cs" />
     <Compile Include="Configuration\LocalProcessDescriptor.cs" />
     <Compile Include="Configuration\ProjectionDescriptor.cs" />
-    <Compile Include="Configuration\RemoteBoundedContext.cs" />
-    <Compile Include="Configuration\RemoteBoundedContextRegistration.cs" />
-    <Compile Include="Configuration\RoutingDescriptor.cs" />
     <Compile Include="Configuration\SagaRegistration.cs" />
-    <Compile Include="Configuration\SubscriptionDescriptor.cs" />
     <Compile Include="CqrsEngine.cs" />
     <Compile Include="Castle\CqrsFacility.cs" />
     <Compile Include="Configuration\EventDispatcher.cs" />

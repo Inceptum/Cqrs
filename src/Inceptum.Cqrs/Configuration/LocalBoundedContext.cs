@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Linq;
+using EventStore.ClientAPI;
+using Inceptum.Cqrs.InfrastructureCommands;
 using Inceptum.Cqrs.Routing;
 using Inceptum.Messaging.Configuration;
+using NEventStore;
+using NEventStore.Dispatcher;
 
 namespace Inceptum.Cqrs.Configuration
 {
@@ -21,45 +26,72 @@ namespace Inceptum.Cqrs.Configuration
         [EditorBrowsable(EditorBrowsableState.Never)]
         bool Equals(object obj);
     }
-
-    public static class LocalBoundedContextRegistrationExtensions
-    {
-        public static PublishingCommandsDescriptor WithLoopback(this ListeningCommandsDescriptor descriptor, string route)
-        {
-            return descriptor.PublishingCommands(descriptor.Types).To(descriptor.BoundedContextName).With(route);
-        }
-
-        public static ListeningEventsDescriptor WithLoopback(this PublishingEventsDescriptor descriptor, string route)
-        {
-            return descriptor.ListeningEvents(descriptor.Types).From(descriptor.BoundedContextName).On(route);
-        }
-
-    }
+ 
 
 
     public static class LocalBoundedContext
     {
+ 
 
-
-        public static LocalBoundedContextRegistration Named(string name)
-        {
-            return new LocalBoundedContextRegistration(name);
-        }
-
-        public static IBoundedContextRegistration Named1(string name)
+        public static BoundedContextRegistration1 Named(string name)
         {
             return new BoundedContextRegistration1(name);
         }
     }
 
 
+    public static class BoundedContextRegistrationExtensions
+    {
+        public static PublishingCommandsDescriptor WithLoopback(this ListeningCommandsDescriptor descriptor, string route=null)
+        {
+            route = route ?? descriptor.Route;
+            return descriptor.PublishingCommands(descriptor.Types).To(descriptor.BoundedContextName).With(route);
+        }
+
+        public static ListeningEventsDescriptor WithLoopback(this PublishingEventsDescriptor descriptor, string route=null)
+        {
+            route = route ?? descriptor.Route;
+            return descriptor.ListeningEvents(descriptor.Types).From(descriptor.BoundedContextName).On(route);
+        }
+
+        public static  IListeningRouteDescriptor<ListeningCommandsDescriptor> ListeningInfrastructureCommands(this IBoundedContextRegistration registration)
+        {
+            return registration.ListeningCommands(typeof(ReplayEventsCommand));
+        }
+
+        public static PublishingCommandsDescriptor PublishingInfrastructureCommands(this IBoundedContextRegistration registration)
+        {
+            return registration.PublishingCommands(typeof(ReplayEventsCommand));
+        }
+    }
+
     public interface IBoundedContextRegistration : IRegistration, IHideObjectMembers
     {
+        string BoundedContextName { get; }
+    
+
+        IBoundedContextRegistration FailedCommandRetryDelay(long delay);
         PublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes);
         ListeningEventsDescriptor ListeningEvents(params Type[] type);
         IListeningRouteDescriptor<ListeningCommandsDescriptor> ListeningCommands(params Type[] type);
         IPublishingRouteDescriptor<PublishingEventsDescriptor> PublishingEvents(params Type[] type);
         ProcessingOptionsDescriptor ProcessingOptions(string route);
+
+        IBoundedContextRegistration WithProjection(object projection, string fromBoundContext);
+        IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext);
+        IBoundedContextRegistration WithProjection<TListener>(string fromBoundContext);
+        IBoundedContextRegistration WithCommandsHandler(object handler);
+        IBoundedContextRegistration WithCommandsHandler<T>();
+        IBoundedContextRegistration WithCommandsHandlers(params Type[] handlers);
+        IBoundedContextRegistration WithCommandsHandler(Type handler);
+
+        IBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore);
+        IBoundedContextRegistration WithEventStore(IEventStoreConnection eventStoreConnection);
+
+
+        IBoundedContextRegistration WithProcess(object process);
+        IBoundedContextRegistration WithProcess(Type process);
+        IBoundedContextRegistration WithProcess<TProcess>() where TProcess : IProcess;
     }
 
     public class BoundedContextRegistration1 : IBoundedContextRegistration
@@ -71,7 +103,10 @@ namespace Inceptum.Cqrs.Configuration
         public BoundedContextRegistration1(string boundedContextName)
         {
             BoundedContextName = boundedContextName;
+            AddDescriptor(new InfrastructureCommandsHandlerDescriptor());
         }
+
+        public long FailedCommandRetryDelayInternal { get; set; }
 
         protected T AddDescriptor<T>(T descriptor) where T : IBoundedContextDescriptor
         {
@@ -105,9 +140,29 @@ namespace Inceptum.Cqrs.Configuration
             return AddDescriptor(new ProcessingOptionsDescriptor(this, route));
         }
 
+
+        public IBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
+        {
+            AddDescriptor(new EventStoreDescriptor(configureEventStore));
+            return this;
+        }
+        public IBoundedContextRegistration WithEventStore(IEventStoreConnection eventStoreConnection)
+        {
+            AddDescriptor(new GetEventStoreDescriptor(eventStoreConnection));
+            return this;
+        }
+
+        public IBoundedContextRegistration FailedCommandRetryDelay(long delay)
+        {
+            if (delay < 0) throw new ArgumentException("threadCount should be greater or equal to 0", "delay");
+            FailedCommandRetryDelayInternal = delay;
+            return this;
+        }
+
+
         void IRegistration.Create(CqrsEngine cqrsEngine)
         {
-            var boundedContext = new BoundedContext(cqrsEngine, BoundedContextName, 1, 60000, true, BoundedContextName);
+            var boundedContext = new BoundedContext(cqrsEngine, BoundedContextName, 1, FailedCommandRetryDelayInternal, true, BoundedContextName);
             foreach (var descriptor in m_Descriptors)
             {
                 descriptor.Create(boundedContext, cqrsEngine.DependencyResolver);
@@ -125,29 +180,78 @@ namespace Inceptum.Cqrs.Configuration
             }
         }
 
-        public BoundedContextRegistration1 WithCommandsHandler(object handler)
+        public IBoundedContextRegistration WithCommandsHandler(object handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
             AddDescriptor(new CommandsHandlerDescriptor(handler));
             return this;
         }
-        public BoundedContextRegistration1 WithCommandsHandler<T>()
+        public IBoundedContextRegistration WithCommandsHandler<T>()
         {
             AddDescriptor(new CommandsHandlerDescriptor(typeof(T)));
             return this;
         }
 
-        public BoundedContextRegistration1 WithCommandsHandlers(params Type[] handlers)
+        public IBoundedContextRegistration WithCommandsHandlers(params Type[] handlers)
         {
             AddDescriptor(new CommandsHandlerDescriptor(handlers));
             return this;
         }
 
-        public BoundedContextRegistration1 WithCommandsHandler(Type handler)
+        public IBoundedContextRegistration WithCommandsHandler(Type handler)
         {
             if (handler == null) throw new ArgumentNullException("handler");
             AddDescriptor(new CommandsHandlerDescriptor(handler));
             return this;
+        }
+
+
+        public IBoundedContextRegistration WithProjection(object projection, string fromBoundContext)
+        {
+            RegisterProjections(projection, fromBoundContext);
+            return this;
+        }
+
+        public IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext)
+        {
+            RegisterProjections(projection, fromBoundContext);
+            return this;
+        }
+
+        public IBoundedContextRegistration WithProjection<TListener>(string fromBoundContext)
+        {
+            RegisterProjections(typeof(TListener), fromBoundContext);
+            return this;
+        }
+
+        protected void RegisterProjections(object projection, string fromBoundContext)
+        {
+            if (projection == null) throw new ArgumentNullException("projection");
+            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext));
+        }
+
+        protected void RegisterProjections(Type projection, string fromBoundContext)
+        {
+            if (projection == null) throw new ArgumentNullException("projection");
+            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext));
+        }
+
+        public IBoundedContextRegistration WithProcess(object process)
+        {
+            AddDescriptor(new LocalProcessDescriptor(process));
+            return this;
+        }
+
+        public IBoundedContextRegistration WithProcess(Type process)
+        {
+            AddDescriptor(new LocalProcessDescriptor(process));
+            return this;
+        }
+
+        public IBoundedContextRegistration WithProcess<TProcess>()
+            where TProcess : IProcess
+        {
+            return WithProcess(typeof(TProcess));
         }
 
         IEnumerable<Type> IRegistration.Dependencies
@@ -359,7 +463,7 @@ namespace Inceptum.Cqrs.Configuration
         {
         }
 
-        protected string Route { get; private set; }
+        protected internal string Route { get; private set; }
 
         T IListeningRouteDescriptor<T>.On(string route)
         {
@@ -381,7 +485,7 @@ namespace Inceptum.Cqrs.Configuration
     public abstract class PublishingRouteDescriptor<T> : RouteDescriptorBase<T>, IPublishingRouteDescriptor<T> where T : RouteDescriptorBase
     {
         protected T Descriptor { private get; set; }
-        protected string Route { get; private set; }
+        protected internal  string Route { get; private set; }
 
         protected PublishingRouteDescriptor(BoundedContextRegistration1 registration):base(registration)
         {
@@ -444,6 +548,16 @@ namespace Inceptum.Cqrs.Configuration
     public abstract class BoundedContextRegistrationWrapper : IBoundedContextRegistration
     {
         private readonly BoundedContextRegistration1 m_Registration;
+        public long FailedCommandRetryDelayInternal
+        {
+            get { return m_Registration.FailedCommandRetryDelayInternal; }
+            set { m_Registration.FailedCommandRetryDelayInternal = value; }
+        }
+
+        public IBoundedContextRegistration FailedCommandRetryDelay(long delay)
+        {
+            return m_Registration.FailedCommandRetryDelay(delay);
+        }
 
         protected BoundedContextRegistrationWrapper(BoundedContextRegistration1 registration)
         {
@@ -489,22 +603,22 @@ namespace Inceptum.Cqrs.Configuration
             (m_Registration as IRegistration).Process(cqrsEngine);
         }
 
-        public BoundedContextRegistration1 WithCommandsHandler(object handler)
+        public IBoundedContextRegistration WithCommandsHandler(object handler)
         {
             return m_Registration.WithCommandsHandler(handler);
         }
 
-        public BoundedContextRegistration1 WithCommandsHandler<T>()
+        public IBoundedContextRegistration WithCommandsHandler<T>()
         {
             return m_Registration.WithCommandsHandler<T>();
         }
 
-        public BoundedContextRegistration1 WithCommandsHandlers(params Type[] handlers)
+        public IBoundedContextRegistration WithCommandsHandlers(params Type[] handlers)
         {
             return m_Registration.WithCommandsHandlers(handlers);
         }
 
-        public BoundedContextRegistration1 WithCommandsHandler(Type handler)
+        public IBoundedContextRegistration WithCommandsHandler(Type handler)
         {
             return m_Registration.WithCommandsHandler(handler);
         }
@@ -512,6 +626,47 @@ namespace Inceptum.Cqrs.Configuration
         IEnumerable<Type> IRegistration.Dependencies
         {
             get { return (m_Registration as IRegistration).Dependencies; }
+        }
+
+
+        public IBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
+        {
+            return m_Registration.WithEventStore(configureEventStore);
+        }
+
+        public IBoundedContextRegistration WithEventStore(IEventStoreConnection eventStoreConnection)
+        {
+            return m_Registration.WithEventStore(eventStoreConnection);
+        }
+
+        public IBoundedContextRegistration WithProjection(object projection, string fromBoundContext)
+        {
+            return m_Registration.WithProjection(projection, fromBoundContext);
+        }
+
+        public IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext)
+        {
+            return m_Registration.WithProjection(projection, fromBoundContext);
+        }
+
+        public IBoundedContextRegistration WithProjection<TListener>(string fromBoundContext)
+        {
+            return m_Registration.WithProjection<TListener>(fromBoundContext);
+        }
+
+        public IBoundedContextRegistration WithProcess(object process)
+        {
+            return m_Registration.WithProcess(process);
+        }
+
+        public IBoundedContextRegistration WithProcess(Type process)
+        {
+            return m_Registration.WithProcess(process);
+        }
+
+        public IBoundedContextRegistration WithProcess<TProcess>() where TProcess : IProcess
+        {
+            return m_Registration.WithProcess<TProcess>();
         }
     }
 }

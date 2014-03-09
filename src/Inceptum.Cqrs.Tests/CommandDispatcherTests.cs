@@ -37,8 +37,8 @@ namespace Inceptum.Cqrs.Tests
             var dispatcher = new CommandDispatcher("testBC");
             var handler = new Handler();
             dispatcher.Wire(handler);
-            dispatcher.Dispatch("test",CommandPriority.Normal, (delay, acknowledge) => { },new Endpoint(),"route");
-            dispatcher.Dispatch(1, CommandPriority.Normal, (delay, acknowledge) => { }, new Endpoint(), "route");
+            dispatcher.Dispatch("test", (delay, acknowledge) => { },new Endpoint(),"route");
+            dispatcher.Dispatch(1, (delay, acknowledge) => { }, new Endpoint(), "route");
             Assert.That(handler.HandledCommands, Is.EquivalentTo(new object[] { "test", 1 }), "Some commands were not dispatched");
         }
 
@@ -59,7 +59,7 @@ namespace Inceptum.Cqrs.Tests
         {
             var dispatcher = new CommandDispatcher("testBC");
             var ack = true;
-            dispatcher.Dispatch("testCommand", CommandPriority.Normal, (delay, acknowledge) => { ack = acknowledge; }, new Endpoint(), "route");
+            dispatcher.Dispatch("testCommand",  (delay, acknowledge) => { ack = acknowledge; }, new Endpoint(), "route");
             Assert.That(ack,Is.False);
         }
 
@@ -70,7 +70,7 @@ namespace Inceptum.Cqrs.Tests
             var dispatcher = new CommandDispatcher("testBC");
             var handler = new Handler();
             dispatcher.Wire(handler);
-            dispatcher.Dispatch(DateTime.Now, CommandPriority.Normal, (delay, acknowledge) => { ack = false; }, new Endpoint(), "route");
+            dispatcher.Dispatch(DateTime.Now,   (delay, acknowledge) => { ack = false; }, new Endpoint(), "route");
             Assert.That(ack,Is.False,"Failed command was not unacked");
         }
         [Test]
@@ -78,7 +78,7 @@ namespace Inceptum.Cqrs.Tests
         {
             bool ack = true;
             var dispatcher = new CommandDispatcher("testBC");
-            dispatcher.Dispatch(DateTime.Now, CommandPriority.Normal, (delay, acknowledge) => { ack = false; }, new Endpoint(), "route");
+            dispatcher.Dispatch(DateTime.Now,  (delay, acknowledge) => { ack = false; }, new Endpoint(), "route");
             Assert.That(ack,Is.False,"Failed command was not unacked");
         }
     }

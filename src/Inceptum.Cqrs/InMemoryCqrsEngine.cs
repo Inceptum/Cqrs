@@ -20,7 +20,14 @@ namespace Inceptum.Cqrs
         {
              
         }
- 
+        public InMemoryCqrsEngine(IDependencyResolver dependencyResolver, params IRegistration[] registrations) :
+            base(dependencyResolver, new MessagingEngine(new TransportResolver(new Dictionary<string, TransportInfo> { { "InMemory", new TransportInfo("none", "none", "none", null, "InMemory") } })),
+                       new InMemoryEndpointResolver(), new DefaultEndpointProvider(),
+                       registrations
+                   )
+        {
+
+        }
 
         protected override void Dispose(bool disposing)
         {

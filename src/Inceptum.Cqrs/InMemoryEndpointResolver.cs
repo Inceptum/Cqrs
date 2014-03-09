@@ -11,7 +11,7 @@ namespace Inceptum.Cqrs
         
         public Endpoint Resolve(string route, RoutingKey key, IEndpointProvider endpointProvider)
         {
-            return new Endpoint("InMemory",key.LocalBoundedContext + "." + route, true, "json");
+            return new Endpoint("InMemory",/*key.LocalBoundedContext + "." + */route, true, "json");
         }
     }
 }

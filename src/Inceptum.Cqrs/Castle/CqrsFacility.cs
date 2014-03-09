@@ -42,7 +42,7 @@ namespace Inceptum.Cqrs.Castle
     {
         private readonly string m_EngineComponetName = Guid.NewGuid().ToString();
         private readonly Dictionary<IHandler, Action<IHandler>> m_WaitList = new Dictionary<IHandler, Action<IHandler>>();
-        private BoundedContextRegistration[] m_BoundedContexts = new BoundedContextRegistration[0];
+        private IBoundedContextRegistration[] m_BoundedContexts = new IBoundedContextRegistration[0];
         private readonly List<SagaRegistration> m_Sagas = new List<SagaRegistration>();
         private bool m_InMemory=false;
         private static bool m_CreateMissingEndpoints = false;
@@ -53,7 +53,7 @@ namespace Inceptum.Cqrs.Castle
             return this;
         }
 
-        public CqrsFacility BoundedContexts(params BoundedContextRegistration[] boundedContexts)
+        public CqrsFacility BoundedContexts(params IBoundedContextRegistration[] boundedContexts)
         {
             m_BoundedContexts = boundedContexts;
             return this;
@@ -109,14 +109,12 @@ namespace Inceptum.Cqrs.Castle
             {
                 var projectedBoundContext = (string)(handler.ComponentModel.ExtendedProperties["ProjectedBoundContext"]);
                 var boundContext = (string)(handler.ComponentModel.ExtendedProperties["BoundContext"]);
-                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.Name == boundContext);
+                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == boundContext);
                 if (registration == null)
                     throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", projectedBoundContext));
-                if (registration is RemoteBoundedContextRegistration)
-                    throw new ComponentRegistrationException(string.Format("Projection can be registered only for local bounded contexts. Bounded context {0} is remote", registration.Name));
-          
+               
                 //TODO: decide which service to use
-                (registration as LocalBoundedContextRegistration).WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext);
+                registration.WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext);
  
             }
 
@@ -125,14 +123,11 @@ namespace Inceptum.Cqrs.Castle
            {
                var commandsHandlerFor = (string)(handler.ComponentModel.ExtendedProperties["CommandsHandlerFor"]);
 
-               var registration = m_BoundedContexts.FirstOrDefault(bc => bc.Name == commandsHandlerFor);
+               var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == commandsHandlerFor);
                if(registration==null)
                    throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered",commandsHandlerFor)); 
-               if(registration is RemoteBoundedContextRegistration)
-                   throw new ComponentRegistrationException(string.Format("Commands handler can be registered only for local bounded contexts. Bounded context {0} is remote",commandsHandlerFor));
-          
-               //TODO: decide which service to use
-               (registration as LocalBoundedContextRegistration).WithCommandsHandler(handler.ComponentModel.Services.First());
+              
+               registration.WithCommandsHandler(handler.ComponentModel.Services.First());
  
            } 
 
@@ -145,13 +140,11 @@ namespace Inceptum.Cqrs.Castle
             if (isProcess)
             {
                 var processFor = (string)(handler.ComponentModel.ExtendedProperties["ProcessFor"]);
-                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.Name == processFor);
+                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == processFor);
                 if (registration == null)
                     throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", processFor));
-                if (registration is RemoteBoundedContextRegistration)
-                    throw new ComponentRegistrationException(string.Format("Process can be registered only for local bounded contexts. Bounded context {0} is remote", processFor));
-
-                (registration as LocalBoundedContextRegistration).WithProcess(handler.ComponentModel.Services.First());
+               
+                registration.WithProcess(handler.ComponentModel.Services.First());
             }
         }
 
@@ -173,7 +166,7 @@ namespace Inceptum.Cqrs.Castle
         }
     }
 
-
+    //TODO: shoul be injected by cqrs with preset local BC
     class CommandSender:ICommandSender
     {
         private ICqrsEngine m_Engine;
@@ -207,14 +200,18 @@ namespace Inceptum.Cqrs.Castle
         {
         }
 
-        public void SendCommand<T>(T command, string boundedContext, uint priority = 0)
+        
+        
+        public void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0)
         {
-            CqrsEngine.SendCommand(command,boundedContext,priority);
+            CqrsEngine.SendCommand(command, boundedContext,remoteBoundedContext, priority);
         }
 
-        public void ReplayEvents(string boundedContext, params Type[] types)
+      
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types)
         {
-            CqrsEngine.ReplayEvents(boundedContext, types);
+            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, types);
         }
     }
 

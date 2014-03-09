@@ -25,6 +25,71 @@ namespace Inceptum.Cqrs
         private Endpoint createEndpoint(string route, RoutingKey key)
         {
             m_SerializationFormat = "protobuf";
+
+            if (key.RouteType == RouteType.Commands && key.CommunicationType == CommunicationType.Subscribe)
+            {
+                return new Endpoint
+                {
+                    Destination = new Destination
+                    {
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Subscribe = string.Format("{0}.queue.{1}.{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), route)
+                    },
+                    SerializationFormat = m_SerializationFormat,
+                    SharedDestination = true,
+                    TransportId = m_Transport
+                };
+            }
+
+
+            if (key.RouteType == RouteType.Commands && key.CommunicationType == CommunicationType.Publish)
+            {
+                return new Endpoint
+                {
+                    Destination = new Destination
+                    {
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Subscribe = string.Format("{0}.queue.{1}.{2}.{3}", key.LocalBoundedContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
+                    },
+                    SerializationFormat = m_SerializationFormat,
+                    SharedDestination = true,
+                    TransportId = m_Transport
+                };
+            }
+
+            if (key.RouteType == RouteType.Events && key.CommunicationType == CommunicationType.Subscribe)
+            {
+                return new Endpoint
+                {
+                    Destination = new Destination
+                    {
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Subscribe = string.Format("{0}.queue.{1}.{2}.{3}", key.LocalBoundedContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
+                    },
+                    SerializationFormat = m_SerializationFormat,
+                    SharedDestination = true,
+                    TransportId = m_Transport
+                };
+            }
+
+
+            if (key.RouteType == RouteType.Events && key.CommunicationType == CommunicationType.Publish)
+            {
+                return new Endpoint
+                {
+                    Destination = new Destination
+                    {
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Subscribe = null
+                    },
+                    SerializationFormat = m_SerializationFormat,
+                    SharedDestination = true,
+                    TransportId = m_Transport
+                };
+            }
+            return default(Endpoint);
+/*
+
             string subscribe;
             if (key.RouteType == RouteType.Commands)
             {
@@ -47,7 +112,7 @@ namespace Inceptum.Cqrs
                 SerializationFormat = m_SerializationFormat,
                 SharedDestination = true,
                 TransportId = m_Transport
-            };
+            };*/
         }
         public Endpoint Resolve(string route, RoutingKey key, IEndpointProvider endpointProvider)
         {

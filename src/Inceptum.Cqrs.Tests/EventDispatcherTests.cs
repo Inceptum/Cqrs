@@ -49,9 +49,9 @@ namespace Inceptum.Cqrs.Tests
         {
             var dispatcher = new EventDispatcher("testBC");
             var handler = new EventHandler();
-            dispatcher.Wire(handler);
-            dispatcher.Dispacth("test", (delay, acknowledge) => { });
-            dispatcher.Dispacth(1, (delay, acknowledge) => { });
+            dispatcher.Wire("testBC",handler);
+            dispatcher.Dispacth("testBC", "test", (delay, acknowledge) => { });
+            dispatcher.Dispacth("testBC", 1, (delay, acknowledge) => { });
             Assert.That(handler.HandledEvents, Is.EquivalentTo(new object[] { "test" ,1}), "Some events were not dispatched");
         }
 
@@ -61,9 +61,9 @@ namespace Inceptum.Cqrs.Tests
             var dispatcher=new EventDispatcher("testBC");
             var handler1 = new EventHandler();
             var handler2 = new EventHandler();
-            dispatcher.Wire(handler1);
-            dispatcher.Wire(handler2);
-            dispatcher.Dispacth("test", (delay, acknowledge) => { });
+            dispatcher.Wire("testBC",handler1);
+            dispatcher.Wire("testBC",handler2);
+            dispatcher.Dispacth("testBC","test", (delay, acknowledge) => { });
             Assert.That(handler1.HandledEvents, Is.EquivalentTo(new[] { "test" }), "Event was not dispatched");
             Assert.That(handler2.HandledEvents, Is.EquivalentTo(new[] { "test" }), "Event was not dispatched");
         }
@@ -75,10 +75,10 @@ namespace Inceptum.Cqrs.Tests
             var dispatcher=new EventDispatcher("testBC");
             var handler1 = new EventHandler();
             var handler2 = new EventHandler(true);
-            dispatcher.Wire(handler1);
-            dispatcher.Wire(handler2);
+            dispatcher.Wire("testBC",handler1);
+            dispatcher.Wire("testBC", handler2);
             Tuple<long, bool> result=null;
-            dispatcher.Dispacth("test", (delay, acknowledge) => { result = Tuple.Create(delay, acknowledge); });
+            dispatcher.Dispacth("testBC", "test", (delay, acknowledge) => { result = Tuple.Create(delay, acknowledge); });
             Assert.That(handler1.HandledEvents, Is.EquivalentTo(new[] { "test" }), "Event was not dispatched");
             Assert.That(result,Is.Not.Null,"fail was not reported");
             Assert.That(result.Item2,Is.False,"fail was not reported");
@@ -90,9 +90,9 @@ namespace Inceptum.Cqrs.Tests
         {
             var dispatcher=new EventDispatcher("testBC");
             var handler = new EventHandler();
-            dispatcher.Wire(handler);
+            dispatcher.Wire("testBC", handler);
             Tuple<long, bool> result=null;
-            dispatcher.Dispacth(new Exception(), (delay, acknowledge) => { result = Tuple.Create(delay, acknowledge); });
+            dispatcher.Dispacth("testBC", new Exception(), (delay, acknowledge) => { result = Tuple.Create(delay, acknowledge); });
             Assert.That(result,Is.Not.Null,"fail was not reported");
             Assert.That(result.Item2,Is.False,"fail was not reported");
             Assert.That(result.Item1, Is.EqualTo(100), "fail was not reported");

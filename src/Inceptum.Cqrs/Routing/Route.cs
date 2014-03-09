@@ -106,6 +106,8 @@ namespace Inceptum.Cqrs.Routing
         private readonly string m_BoundedContext;
         public string Name { get; set; }
         public RouteType? Type { get; set; }
+
+        //TODO:: need to pass it as processing group concurrency level to messagingEngine
         public uint ConcurrencyLevel { get; set; }
 
         public Route(string name, string boundedContext)
@@ -175,7 +177,7 @@ namespace Inceptum.Cqrs.Routing
             m_RouteResolvers[routingKey] = resolver;
         }
 
-        public void AddSubscribedEvent(Type @event, uint priority,string boundedContext, IEndpointResolver resolver)
+        public void AddSubscribedEvent(Type @event, uint priority,string remoteBoundedContext, IEndpointResolver resolver)
         {
             if (Type == null)
                 Type = RouteType.Events;
@@ -187,7 +189,7 @@ namespace Inceptum.Cqrs.Routing
                 LocalBoundedContext = m_BoundedContext,
                 RouteType = Type.Value,
                 MessageType = @event,
-                RemoteBoundedContext = boundedContext,
+                RemoteBoundedContext = remoteBoundedContext,
                 Priority = priority,
                 CommunicationType = CommunicationType.Subscribe 
             };
@@ -204,8 +206,10 @@ namespace Inceptum.Cqrs.Routing
             foreach (var pair in m_RouteResolvers)
             {
                 var endpoint = pair.Value.Resolve(Name, pair.Key, endpointProvider);
+/*
                 if (pair.Key.CommunicationType == CommunicationType.Subscribe)
                     endpoint = new Endpoint(endpoint.TransportId, "", endpoint.Destination.Subscribe, endpoint.SharedDestination, endpoint.SerializationFormat);
+*/
                 m_MessageRoutes[pair.Key] = endpoint;
             }
         }

@@ -19,13 +19,10 @@ namespace Inceptum.Cqrs.Configuration
 
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
-            var lestenedBoundContext = cqrsEngine.BoundedContexts.FirstOrDefault(bc => bc.Name == m_FromBoundContext);
-            if (lestenedBoundContext == null)
-                throw new ConfigurationErrorsException(string.Format("Bounded context '{0}' not registered",m_FromBoundContext));
-            foreach (var projection in ResolvedDependencies)
+             foreach (var projection in ResolvedDependencies)
             {
                 //TODO: pass bounded context ReadModel
-                lestenedBoundContext.EventDispatcher.Wire(projection);
+                boundedContext.EventDispatcher.Wire(m_FromBoundContext, projection);
             }
         }
     }
