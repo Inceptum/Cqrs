@@ -162,13 +162,16 @@ namespace Inceptum.Cqrs.Castle
                 {
                     registrations = m_BoundedContexts.Cast<IRegistration>().ToArray()
                 }));
-            Kernel.Register(
+ /*           Kernel.Register(
                 Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new {kernel = Kernel}));
-
+*/
 
             Kernel.Resolve<ICqrsEngine>();
         }
     }
+
+
+    
 
     //TODO: should be injected by cqrs with preset local BC
     class CommandSender:ICommandSender
