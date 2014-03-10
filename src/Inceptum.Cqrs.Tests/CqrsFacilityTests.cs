@@ -200,7 +200,7 @@ namespace Inceptum.Cqrs.Tests
                 var listener = container.Resolve<EventListenerWithICommandSenderDependency>();
                 var commandsHandler = container.Resolve<CommandsHandler>();
                 Assert.That(listener.Sender,Is.Not.Null);
-                listener.Sender.SendCommand("test", "bc", "bc");
+                listener.Sender.SendCommand("test", "bc");
                 Thread.Sleep(200);
                 Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] { "test" }), "Command was not dispatched");
             }
@@ -340,7 +340,7 @@ namespace Inceptum.Cqrs.Tests
             var message = string.Format("Event from {0} is caught by saga:{1}", boundedContext, @event);
             Messages.Add(message);
             if(boundedContext=="bc1")
-                engine.SendCommand("cmd", "sagaHost", "bc2");
+                engine.SendCommand("cmd", "bc2");
             if (boundedContext == "bc2")
                 Complete.Set();
             Console.WriteLine(message);

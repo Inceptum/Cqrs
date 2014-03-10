@@ -49,7 +49,7 @@ namespace Inceptum.Cqrs.Configuration
             {
                 foreach (var listenedBoundedContext in m_ListenedBoundContext)
                 {
-                    boundedContext.EventDispatcher.Wire(listenedBoundedContext, saga, new OptionalParameter<ICommandSender>(cqrsEngine));    
+                    boundedContext.EventDispatcher.Wire(listenedBoundedContext, saga, new OptionalParameter<ICommandSender>(boundedContext));    
                 }
                 
             }

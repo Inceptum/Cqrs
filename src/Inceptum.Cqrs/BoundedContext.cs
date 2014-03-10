@@ -15,7 +15,8 @@ namespace Inceptum.Cqrs
        
     }
 
-    public class BoundedContext : IDisposable, IRouteMap
+    
+    public class BoundedContext : IDisposable, IRouteMap, ICommandSender
     {
         public static IBoundedContextRegistration Named(string name)
         {
@@ -30,12 +31,14 @@ namespace Inceptum.Cqrs
         internal List<IProcess> Processes { get; private set; }
         internal IEventStoreAdapter EventStore { get; set; }
         readonly Dictionary<string,Destination> m_TempDestinations=new Dictionary<string, Destination>();
+        private CqrsEngine m_CqrsEngine;
         internal string Name { get; private set; }
         internal long FailedCommandRetryDelay { get; set; }
 
         internal BoundedContext(CqrsEngine cqrsEngine, string name, long failedCommandRetryDelay)
         {
-       
+            m_CqrsEngine = cqrsEngine;
+
             FailedCommandRetryDelay = failedCommandRetryDelay;
             Name = name;
             EventsPublisher = new EventsPublisher(cqrsEngine, this);
@@ -98,6 +101,16 @@ namespace Inceptum.Cqrs
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public void SendCommand<T>(T command, string remoteBoundedContext, uint priority = 0)
+        {
+            m_CqrsEngine.SendCommand(command,Name,remoteBoundedContext,priority);
+        }
+
+        public void ReplayEvents(string remoteBoundedContext, params Type[] types)
+        {
+            m_CqrsEngine.ReplayEvents(Name,remoteBoundedContext,types);
         }
     }
 }

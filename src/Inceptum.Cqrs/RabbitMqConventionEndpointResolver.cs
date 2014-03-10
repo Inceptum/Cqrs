@@ -49,7 +49,7 @@ namespace Inceptum.Cqrs
                     Destination = new Destination
                     {
                         Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
-                        Subscribe = string.Format("{0}.queue.{1}.{2}.{3}", key.LocalBoundedContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
+                        Subscribe = null
                     },
                     SerializationFormat = m_SerializationFormat,
                     SharedDestination = true,
@@ -64,7 +64,7 @@ namespace Inceptum.Cqrs
                     Destination = new Destination
                     {
                         Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
-                        Subscribe = string.Format("{0}.queue.{1}.{2}.{3}", key.LocalBoundedContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
+                        Subscribe =  string.Format("{0}.queue.{1}.{2}.{3}", key.LocalBoundedContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
                     },
                     SerializationFormat = m_SerializationFormat,
                     SharedDestination = true,

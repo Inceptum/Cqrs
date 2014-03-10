@@ -33,7 +33,8 @@ namespace Inceptum.Cqrs.Configuration
         {
             foreach (var type in m_Types)
             {
-                boundedContext.Routes[Route].AddSubscribedEvent(type, 0,m_BoundedContext,cqrsEngine.EndpointResolver);
+                var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
+                boundedContext.Routes[Route].AddSubscribedEvent(type, 0, m_BoundedContext, endpointResolver);
             }
         }
     }

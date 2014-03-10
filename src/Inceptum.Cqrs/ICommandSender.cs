@@ -5,24 +5,7 @@ namespace Inceptum.Cqrs
 {
     public interface ICommandSender : IDisposable
     {
-        void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext,uint  priority=0);
-        void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types);
+        void SendCommand<T>(T command, string remoteBoundedContext,uint  priority=0);
+        void ReplayEvents(string remoteBoundedContext, params Type[] types);
     }
-
-/*
-
-    public interface ICommandSender : IDisposable
-    {
-        void SendCommand<T>(T command, string boundedContext, RoutingKey key);
-        void ReplayEvents(string boundedContext, params Type[] types);
-    }
-
-    public static class CommandSenderExtensions
-    {
-        public static void SendCommand<T>(this ICommandSender sender, T command, string boundedContext, CommandPriority priority = CommandPriority.Normal)
-        {
-            sender.SendCommand(command, boundedContext, new RoutingKey() { Priority = priority });
-        }
-
-    }*/
 }

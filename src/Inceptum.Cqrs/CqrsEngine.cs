@@ -48,7 +48,7 @@ namespace Inceptum.Cqrs
         }
     }
 
-    public class CqrsEngine :ICqrsEngine
+    public class CqrsEngine :ICqrsEngine,IDisposable
     {
         readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
         private readonly IMessagingEngine m_MessagingEngine;
@@ -114,11 +114,11 @@ namespace Inceptum.Cqrs
 
             foreach (var boundedContext in BoundedContexts)
             {
-                boundedContext.Processes.ForEach(p => p.Start(this, boundedContext.EventsPublisher));
+                boundedContext.Processes.ForEach(p => p.Start(boundedContext, boundedContext.EventsPublisher));
             }
 
 
-             ensureEndpoints();
+            ensureEndpoints();
 
             foreach (var boundedContext in BoundedContexts)
             {
@@ -193,11 +193,12 @@ namespace Inceptum.Cqrs
 
             foreach (var boundedContext in BoundedContexts)
             {
-                log.AppendFormat("Bounded context '{0}'",boundedContext.Name).AppendLine();
+                log.AppendFormat("Bounded context '{0}':",boundedContext.Name).AppendLine();
 
                 boundedContext.ResolveRoutes(m_EndpointProvider);
                 foreach (var route in boundedContext.Routes)
                 {
+                    log.AppendFormat("\t{0} route '{1}':",route.Type, route.Name).AppendLine();
                     foreach (var messageRoute in route.MessageRoutes)
                     {
                         string error;
@@ -206,23 +207,31 @@ namespace Inceptum.Cqrs
                         var messageTypeName = route.Type.ToString().ToLower().TrimEnd('s');
                         bool result = true;
 
-                        if (routingKey.CommunicationType == CommunicationType.Publish && !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Publish, m_CreateMissingEndpoints, out error))
+                        if (routingKey.CommunicationType == CommunicationType.Publish)
                         {
-                            errorMessage.AppendFormat("Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for publishing: {5}.", boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
-                            log.AppendFormat("Route '{1}' {2} type '{3}' resolved endpoint {4}: endpoint is not properly configured for publishing: {5}.", boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
-                            result = false;
+                            if (!m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Publish, m_CreateMissingEndpoints, out error))
+                            {
+                                errorMessage.AppendFormat(
+                                    "Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for publishing: {5}.",
+                                    boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
+                                result = false;
+                            }
+
+                            log.AppendFormat("\t\tPublishing  '{0}' to {1}\t{2}", routingKey.MessageType.Name, endpoint, result ? "OK" : "ERROR:" + error).AppendLine();
                         }
 
-                        if (routingKey.CommunicationType == CommunicationType.Subscribe && !m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, m_CreateMissingEndpoints, out error))
+                        if (routingKey.CommunicationType == CommunicationType.Subscribe)
                         {
-                            errorMessage.AppendFormat("Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for subscription: {5}.", boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
-                            log.AppendFormat("Route '{1}'  {2} type '{3}' resolved endpoint {4}: endpoint is not properly configured for subscription: {5}.", boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
-                            result = false;
+                            if (!m_MessagingEngine.VerifyEndpoint(endpoint, EndpointUsage.Subscribe, m_CreateMissingEndpoints, out error))
+                            {
+                                errorMessage.AppendFormat(
+                                    "Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for subscription: {5}.",
+                                    boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
+                                result = false;
+                            }
+
+                            log.AppendFormat("\t\tSubscribing '{0}' on {1}\t{2}", routingKey.MessageType.Name, endpoint, result ? "OK" : "ERROR:" + error).AppendLine();
                         }
-
-                        if (result)
-                            log.AppendFormat("Route '{1}' {2} type '{3}' resolved endpoint {4}: OK", boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint).AppendLine();
-
                         allEndpointsAreValid = allEndpointsAreValid && result;
                     }
                     
@@ -364,8 +373,9 @@ namespace Inceptum.Cqrs
 
     }
 
-    internal interface ICqrsEngine : ICommandSender
+    internal interface ICqrsEngine
     {
-
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types);
+        void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0);
     }
 }
