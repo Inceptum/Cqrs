@@ -206,10 +206,6 @@ namespace Inceptum.Cqrs.Routing
             foreach (var pair in m_RouteResolvers)
             {
                 var endpoint = pair.Value.Resolve(Name, pair.Key, endpointProvider);
-/*
-                if (pair.Key.CommunicationType == CommunicationType.Subscribe)
-                    endpoint = new Endpoint(endpoint.TransportId, "", endpoint.Destination.Subscribe, endpoint.SharedDestination, endpoint.SerializationFormat);
-*/
                 m_MessageRoutes[pair.Key] = endpoint;
             }
         }

@@ -170,7 +170,7 @@ namespace Inceptum.Cqrs.Castle
         }
     }
 
-    //TODO: shoul be injected by cqrs with preset local BC
+    //TODO: should be injected by cqrs with preset local BC
     class CommandSender:ICommandSender
     {
         private ICqrsEngine m_Engine;

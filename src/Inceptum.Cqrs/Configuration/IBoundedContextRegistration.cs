@@ -8,7 +8,7 @@ namespace Inceptum.Cqrs.Configuration
     public interface IBoundedContextRegistration : IRegistration, IHideObjectMembers
     {
         string BoundedContextName { get; }
-    
+        long FailedCommandRetryDelayInternal{get; set; }
 
         IBoundedContextRegistration FailedCommandRetryDelay(long delay);
         PublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes);

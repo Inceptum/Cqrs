@@ -190,12 +190,14 @@ namespace Inceptum.Cqrs.Tests
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(messagingEngine))
                     .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(
-                        BoundedContext.Named("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback())
+                            BoundedContext.Named("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback())
                             )
-                    .Register(Component.For<EventListenerWithICommandSenderDependency>().AsSaga("bc"))
+                    .Register(Component.For<EventListenerWithICommandSenderDependency>().AsSaga("bc", "remoteBc"))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
 
+                var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
+                cqrsEngine.BoundedContexts.First(c => c.Name == "bc").EventDispatcher.Dispacth("remoteBc","some event", (delay, acknowledge) => { });
 
                 var listener = container.Resolve<EventListenerWithICommandSenderDependency>();
                 var commandsHandler = container.Resolve<CommandsHandler>();
@@ -335,12 +337,12 @@ namespace Inceptum.Cqrs.Tests
     {
         public static List<string> Messages=new List<string>();
         public static ManualResetEvent Complete=new ManualResetEvent(false);
-        private void Handle(int @event, ICommandSender engine, string boundedContext)
+        private void Handle(int @event, ICommandSender sender, string boundedContext)
         {
             var message = string.Format("Event from {0} is caught by saga:{1}", boundedContext, @event);
             Messages.Add(message);
             if(boundedContext=="bc1")
-                engine.SendCommand("cmd", "bc2");
+                sender.SendCommand("cmd", "bc2");
             if (boundedContext == "bc2")
                 Complete.Set();
             Console.WriteLine(message);
@@ -350,15 +352,15 @@ namespace Inceptum.Cqrs.Tests
 
     public class EventListenerWithICommandSenderDependency
     {
-        public ICommandSender Sender { get; set; }
+        internal  ICommandSender Sender { get; set; }
 
-        public EventListenerWithICommandSenderDependency(ICommandSender sender)
+        public EventListenerWithICommandSenderDependency()
         {
-            Sender = sender;
         }
 
-        void Handle(string m)
+        void Handle(string m, ICommandSender sender)
         {
+            Sender = sender;
         } 
     }
 

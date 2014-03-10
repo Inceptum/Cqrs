@@ -218,7 +218,8 @@ namespace Inceptum.Cqrs.Tests
                     }),
                     new Dictionary<string, ProcessingGroupInfo>
                     {
-                        {"commandsRoute", new ProcessingGroupInfo() {ConcurrencyLevel = 2}}
+                        {"prioritizedCommandsRoute", new ProcessingGroupInfo() {ConcurrencyLevel = 2}},
+                        {"explicitlyPrioritizedCommandsRoute", new ProcessingGroupInfo() {ConcurrencyLevel = 2}}
                     });
             using (messagingEngine)
             {
@@ -238,19 +239,17 @@ namespace Inceptum.Cqrs.Tests
 
 
                     //explicit prioritization 
-                    .ListeningCommands(typeof(string)).On("commandsRoute")
+                    .ListeningCommands(typeof(string)).On("explicitlyPrioritizedCommandsRoute")
                         .Prioritized(lowestPriority: 2)
                             .WithEndpoint("high").For(key=>key.Priority==0)
                             .WithEndpoint("medium").For(key=>key.Priority==1)
                             .WithEndpoint("low").For(key=>key.Priority==2)
 
                     //resolver based prioritization 
-                    .ListeningCommands(typeof(string)).On("commandsRoute")
+                    .ListeningCommands(typeof(string)).On("prioritizedCommandsRoute")
                         .Prioritized(lowestPriority: 2)
-                            .WithEndpoint("high").For(key => key.Priority == 0)
-                            .WithEndpoint("medium").For(key => key.Priority == 1)
-                            .WithEndpoint("low").For(key => key.Priority == 2)
-                    .ProcessingOptions("selfCommandsRoute").MultiThreaded(10)
+                    .ProcessingOptions("explicitlyPrioritizedCommandsRoute").MultiThreaded(10)
+                    .ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10)
                );
             }
         }
@@ -282,29 +281,22 @@ namespace Inceptum.Cqrs.Tests
                                                     .ListeningCommands(typeof(string)).On("commandsRoute")
                                                         .Prioritized(lowestPriority: 1)
                                                             .WithEndpoint("exchange1").For(key => key.Priority == 1)
-                                                            .WithEndpoint("exchange2").For(key => key.Priority == 0)
+                                                            .WithEndpoint("exchange2").For(key => key.Priority == 2)
                                                     .ProcessingOptions("commandsRoute").MultiThreaded(2)
-                                                    .WithCommandsHandler(commandHandler)/*,
-                                                   BoundedContext.Named("bc").ConcurrencyLevel(1)
-                                                                      .PublishingEvents(typeof (int)).To("eventExchange").RoutedTo("eventQueue")
-                                                                      .ListeningCommands(typeof (string))
-                                                                            .On("exchange1", CommandPriority.Low)
-                                                                            .On("exchange2", CommandPriority.High)
-                                                                            .RoutedFrom("commandQueue")
-                                                                      .WithCommandsHandler(commandHandler)*/)
+                                                    .WithCommandsHandler(commandHandler))
                     )
                 {
-                    messagingEngine.Send("low1", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low2", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low3", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low4", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low5", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low6", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low7", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low8", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low9", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("low10", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
-                    messagingEngine.Send("high", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low1", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low2", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low3", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low4", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low5", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low6", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low7", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low8", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low9", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("low10", new Endpoint("InMemory", "bc.exchange2", serializationFormat: "json"));
+                    messagingEngine.Send("high", new Endpoint("InMemory", "bc.exchange1", serializationFormat: "json"));
                     Thread.Sleep(2000);
                     Console.WriteLine(string.Join("\n", commandHandler.AcceptedCommands));
                     Assert.That(commandHandler.AcceptedCommands.Take(2).Any(c => (string)c == "high"), Is.True);
@@ -321,7 +313,7 @@ namespace Inceptum.Cqrs.Tests
             var messagingEngine = MockRepository.GenerateStrictMock<IMessagingEngine>();
                 
             string error;
-            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(9);
+            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(13);
             //subscription for remote events
             messagingEngine.Expect(e => e.Subscribe(
                 Arg<Endpoint>.Is.Anything,
@@ -370,18 +362,11 @@ namespace Inceptum.Cqrs.Tests
                         .PublishingEvents(typeof (bool) ).With("localEvents").WithLoopback()
                         .ListeningCommands(typeof(string), typeof(DateTime)).On("localCommands").WithLoopback()
                         .ListeningEvents(typeof(int), typeof(long)).From("integration").On("remoteEvents")
-                        .PublishingCommands(typeof(string)).To("integration").With("remoteCommands")
-/*
-                        ,
-                        
-                    RemoteBoundedContext.Named("integration", "operations")
-                        .PublishingEvents(typeof (int),typeof(long)).To("remoteEvents")
-                        .ListeningCommands(typeof(string)).On("remoteCommands"))
-*/
+                        .PublishingCommands(typeof(string)).To("integration").With("remoteCommands").Prioritized(5)
                     ))
                 {
                     ce.BoundedContexts.Find(bc=>bc.Name=="operations").EventsPublisher.PublishEvent(true);
-                    ce.SendCommand("testCommand", "operations", "integration");
+                    ce.SendCommand("testCommand", "operations", "integration",1);
                 }
 
             messagingEngine.VerifyAllExpectations();

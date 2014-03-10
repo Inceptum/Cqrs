@@ -25,6 +25,7 @@ namespace Inceptum.Cqrs
         private Endpoint createEndpoint(string route, RoutingKey key)
         {
             m_SerializationFormat = "protobuf";
+            var rmqRoutingKey = key.Priority == 0 ? key.MessageType.Name : key.MessageType.Name + "." + key.Priority;
 
             if (key.RouteType == RouteType.Commands && key.CommunicationType == CommunicationType.Subscribe)
             {
@@ -32,7 +33,7 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), rmqRoutingKey),
                         Subscribe = string.Format("{0}.queue.{1}.{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), route)
                     },
                     SerializationFormat = m_SerializationFormat,
@@ -48,7 +49,7 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), rmqRoutingKey),
                         Subscribe = null
                     },
                     SerializationFormat = m_SerializationFormat,

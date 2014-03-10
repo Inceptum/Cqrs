@@ -3,7 +3,7 @@ using Inceptum.Cqrs.Routing;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public class ExplicitEndpointDescriptor<T> where T : RouteDescriptorBase
+    public class ExplicitEndpointDescriptor<T>  where T : RouteDescriptorBase
     {
         private readonly string m_Endpoint;
         private readonly T m_Descriptor;

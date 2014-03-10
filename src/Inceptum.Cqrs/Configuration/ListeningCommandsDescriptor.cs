@@ -25,12 +25,20 @@ namespace Inceptum.Cqrs.Configuration
 
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
+            var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
+
             foreach (var type in Types)
             {
-                for (uint priority = 0; priority <= LowestPriority; priority++)
+                if (LowestPriority > 0)
                 {
-                    var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
-                    boundedContext.Routes[Route].AddSubscribedCommand(type, priority, endpointResolver);
+                    for (uint priority = 1; priority <= LowestPriority; priority++)
+                    {
+                        boundedContext.Routes[Route].AddSubscribedCommand(type, priority, endpointResolver);
+                    }
+                }
+                else
+                {
+                    boundedContext.Routes[Route].AddSubscribedCommand(type, 0, endpointResolver);
                 }
             }
         }

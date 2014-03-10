@@ -8,7 +8,7 @@ namespace Inceptum.Cqrs.Configuration
 {
     public abstract class BoundedContextRegistrationWrapper : IBoundedContextRegistration
     {
-        private readonly BoundedContextRegistration m_Registration;
+        private readonly IBoundedContextRegistration m_Registration;
         public long FailedCommandRetryDelayInternal
         {
             get { return m_Registration.FailedCommandRetryDelayInternal; }
@@ -20,7 +20,7 @@ namespace Inceptum.Cqrs.Configuration
             return m_Registration.FailedCommandRetryDelay(delay);
         }
 
-        protected BoundedContextRegistrationWrapper(BoundedContextRegistration registration)
+        protected BoundedContextRegistrationWrapper(IBoundedContextRegistration registration)
         {
             m_Registration = registration;
         }
