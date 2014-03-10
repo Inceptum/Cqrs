@@ -373,7 +373,7 @@ namespace Inceptum.Cqrs
 
     }
 
-    internal interface ICqrsEngine
+    public interface ICqrsEngine
     {
         void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types);
         void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0);

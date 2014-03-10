@@ -162,9 +162,10 @@ namespace Inceptum.Cqrs.Castle
                 {
                     registrations = m_BoundedContexts.Cast<IRegistration>().ToArray()
                 }));
- /*           Kernel.Register(
-                Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new {kernel = Kernel}));
-*/
+            /*
+              Kernel.Register(
+                           Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new {kernel = Kernel}));
+           */
 
             Kernel.Resolve<ICqrsEngine>();
         }

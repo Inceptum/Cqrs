@@ -77,7 +77,7 @@ namespace Inceptum.Cqrs.Tests
     class CqrEngineDependentComponent
     {
         public  static bool Started { get; set; }
-        public CqrEngineDependentComponent(ICommandSender engine)
+        public CqrEngineDependentComponent(ICqrsEngine engine)
         {
         }
         public void Start()
@@ -123,7 +123,7 @@ namespace Inceptum.Cqrs.Tests
                 container.Resolve<ICqrsEngineBootstrapper>().Start();
 
                 container.Resolve<CqrEngineDependentComponent>();
-                Assert.That(reslovedCqrsDependentComponentBeforeInit, Is.False, "ICommandSender was resolved as dependency before it was initialized");
+                Assert.That(reslovedCqrsDependentComponentBeforeInit, Is.False, "ICqrsEngine was resolved as dependency before it was initialized");
             }
         }
 
