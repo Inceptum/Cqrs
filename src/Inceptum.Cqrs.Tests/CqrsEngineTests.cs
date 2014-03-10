@@ -313,7 +313,7 @@ namespace Inceptum.Cqrs.Tests
             var messagingEngine = MockRepository.GenerateStrictMock<IMessagingEngine>();
                 
             string error;
-            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(13);
+            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(15);
             //subscription for remote events
             messagingEngine.Expect(e => e.Subscribe(
                 Arg<Endpoint>.Is.Anything,
@@ -341,6 +341,22 @@ namespace Inceptum.Cqrs.Tests
                 Arg<int>.Is.Equal(0),
                 Arg<Type[]>.List.Equal(new[] { typeof(string), typeof(DateTime) }))).Return(Disposable.Empty);
           
+            //subscription for prioritizedCommands (priority 1 and 2)
+            messagingEngine.Expect(e => e.Subscribe(
+                Arg<Endpoint>.Is.Anything,
+                Arg<CallbackDelegate<object>>.Is.Anything, 
+                Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
+                Arg<string>.Is.Equal("prioritizedCommands"),
+                Arg<int>.Is.Equal(1),
+                Arg<Type[]>.List.Equal(new[] { typeof(byte) }))).Return(Disposable.Empty);
+            messagingEngine.Expect(e => e.Subscribe(
+                Arg<Endpoint>.Is.Anything,
+                Arg<CallbackDelegate<object>>.Is.Anything, 
+                Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
+                Arg<string>.Is.Equal("prioritizedCommands"),
+                Arg<int>.Is.Equal(2),
+                Arg<Type[]>.List.Equal(new[] { typeof(byte) }))).Return(Disposable.Empty);
+          
             //send command to remote BC
             messagingEngine.Expect(e => e.Send(
                 Arg<object>.Is.Equal("testCommand"),
@@ -361,6 +377,7 @@ namespace Inceptum.Cqrs.Tests
                     BoundedContext.Named("operations")
                         .PublishingEvents(typeof (bool) ).With("localEvents").WithLoopback()
                         .ListeningCommands(typeof(string), typeof(DateTime)).On("localCommands").WithLoopback()
+                        .ListeningCommands(typeof(byte)).On("prioritizedCommands").Prioritized(2)
                         .ListeningEvents(typeof(int), typeof(long)).From("integration").On("remoteEvents")
                         .PublishingCommands(typeof(string)).To("integration").With("remoteCommands").Prioritized(5)
                     ))

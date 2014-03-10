@@ -33,12 +33,6 @@ namespace Inceptum.Cqrs.Configuration
         {
         }
 
-        public T Prioritized(uint lowestPriority)
-        {
-            LowestPriority = lowestPriority;
-            return this as T;
-        }
-
 
         public ExplicitEndpointDescriptor<T> WithEndpoint(string endpoint)
         {

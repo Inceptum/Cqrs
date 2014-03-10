@@ -24,6 +24,14 @@ namespace Inceptum.Cqrs.Configuration
              
         }
 
+
+        public PublishingCommandsDescriptor Prioritized(uint lowestPriority)
+        {
+            LowestPriority = lowestPriority;
+            return this;
+        }
+
+
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
             var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
