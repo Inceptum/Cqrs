@@ -1,39 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
-using CommonDomain.Persistence;
-using Inceptum.Cqrs.EventSourcing;
-using NEventStore;
-using NEventStore.Dispatcher;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    internal class EventStoreDescriptor : IBoundedContextDescriptor
+    internal class EventStoreDescriptor<T> : EventStoreDescriptor where T : IEventStoreAdapter
     {
-        private readonly Func<IDispatchCommits, Wireup> m_ConfigureEventStore;
-        private IConstructAggregates m_ConstructAggregates;
-
-        public EventStoreDescriptor(Func<IDispatchCommits, Wireup> configureEventStore)
+        public override IEnumerable<Type> GetDependencies()
         {
-            if (configureEventStore == null) throw new ArgumentNullException("configureEventStore");
-            m_ConfigureEventStore = configureEventStore;
+            return new Type[] { typeof(T) };
         }
 
-        public IEnumerable<Type> GetDependencies()
+        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        {
+            EventStoreAdapter = (T)resolver.GetService(typeof(T));
+        }
+    }
+
+    class EventStoreDescriptor : IBoundedContextDescriptor
+    {
+        protected IEventStoreAdapter EventStoreAdapter { get; set; }
+
+        protected EventStoreDescriptor()
+        {
+          
+        }
+
+        public EventStoreDescriptor(IEventStoreAdapter eventStoreAdapter)
+        {
+            EventStoreAdapter = eventStoreAdapter;
+        }
+
+        public virtual IEnumerable<Type> GetDependencies()
         {
             return new Type[0];
         }
 
-        public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public virtual void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            m_ConstructAggregates = resolver.HasService(typeof (IConstructAggregates))
-                ? (IConstructAggregates)resolver.GetService(typeof(IConstructAggregates))
-                : null;
         }
 
         public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
-            IStoreEvents eventStore = m_ConfigureEventStore(new CommitDispatcher(boundedContext.EventsPublisher)).Build();
-            boundedContext.EventStore = new NEventStoreAdapter(eventStore, m_ConstructAggregates);
+            boundedContext.EventStore = EventStoreAdapter;
         }
     }
 }

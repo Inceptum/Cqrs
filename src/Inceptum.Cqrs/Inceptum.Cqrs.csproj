@@ -109,13 +109,14 @@
     <Compile Include="Configuration\BoundedContextRegistration.cs" />
     <Compile Include="Configuration\CommandDispatcher.cs" />
     <Compile Include="Configuration\CommandsHandlerDescriptor.cs" />
+    <Compile Include="Configuration\EventStoreDescriptor.cs" />
     <Compile Include="Configuration\GetEventStoreDescriptor.cs" />
     <Compile Include="Configuration\DescriptorWithDependencies.cs" />
     <Compile Include="Configuration\GregYoungEventStoreRepository.cs" />
     <Compile Include="Configuration\InfrastructureCommandsHandlerDescriptor.cs" />
     <Compile Include="EventSourcing\NEventStoreAdapter.cs" />
     <Compile Include="EventsPublisher.cs" />
-    <Compile Include="Configuration\EventStoreDescriptor.cs" />
+    <Compile Include="Configuration\NEventStoreDescriptor.cs" />
     <Compile Include="Configuration\IBoundedContextDescriptor.cs" />
     <Compile Include="IEndpointResolver.cs" />
     <Compile Include="IEventStoreAdapter.cs" />

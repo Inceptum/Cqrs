@@ -7,6 +7,7 @@ using NEventStore.Dispatcher;
 using Inceptum.Cqrs.InfrastructureCommands;
 using NEventStore;
 using NEventStore.Dispatcher;
+using NEventStore.Persistence.SqlPersistence;
 
 namespace Inceptum.Cqrs.Configuration
 {
@@ -117,10 +118,32 @@ namespace Inceptum.Cqrs.Configuration
             return WithProcess(typeof(TProcess));
         }
 
+        public LocalBoundedContextRegistration WithEventStore<T>()
+            where T:IEventStoreAdapter
+        {
+            HasEventStore = true;
+            AddDescriptor(new EventStoreDescriptor<T>());
+            return this;
+        }
+
+        public LocalBoundedContextRegistration WithEventStore(IEventStoreAdapter eventStoreAdapter)
+        {
+            HasEventStore = true;
+            AddDescriptor(new EventStoreDescriptor(eventStoreAdapter));
+            return this;
+        }
+
         public LocalBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
         {
             HasEventStore = true;
-            AddDescriptor(new EventStoreDescriptor(configureEventStore));
+            AddDescriptor(new NEventStoreDescriptor((commits, factory) => configureEventStore(commits)));
+            return this;
+        }
+
+        public LocalBoundedContextRegistration WithEventStore(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
+        {
+            HasEventStore = true;
+            AddDescriptor(new NEventStoreDescriptor(configureEventStore));
             return this;
         }
         public LocalBoundedContextRegistration WithEventStore(IEventStoreConnection eventStoreConnection)

@@ -25,8 +25,6 @@ namespace Inceptum.Cqrs.EventSourcing
         {
             return m_StoreEvents.Advanced.GetFrom(@from).SelectMany(c => c.Events).Where(e => types.Length==0 || types.Contains(e.Body.GetType())).Select(message => message.Body);
         }
-
-
           
         //TODO:  resolve aggregates from IoC
         public class AggregateFactory : IConstructAggregates

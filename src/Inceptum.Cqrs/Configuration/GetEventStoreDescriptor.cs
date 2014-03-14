@@ -11,7 +11,7 @@ using NEventStore.Dispatcher;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    internal class GetEventStoreDescriptor : IBoundedContextDescriptor
+    internal class GetEventStoreDescriptor : EventStoreDescriptor
     {
         private readonly IEventStoreConnection m_EventStoreConnection;
 
@@ -20,22 +20,12 @@ namespace Inceptum.Cqrs.Configuration
             m_EventStoreConnection = eventStoreConnection;
         }
 
-        public IEnumerable<Type> GetDependencies()
-        {
-            return new Type[0];
-        }
-
-        public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
             var aggregateConstructor = resolver.HasService(typeof (IConstructAggregates))
                                            ? (IConstructAggregates) resolver.GetService(typeof (IConstructAggregates))
                                            : null;
-            boundedContext.EventStore = new GetEventStoreAdapter(m_EventStoreConnection, boundedContext.EventsPublisher, aggregateConstructor);
-        }
-
-        public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
-        {
-
+            EventStoreAdapter = new GetEventStoreAdapter(m_EventStoreConnection, boundedContext.EventsPublisher, aggregateConstructor);
         }
     }
 }
