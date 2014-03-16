@@ -28,7 +28,7 @@ namespace Inceptum.Cqrs.Configuration
             return descriptor;
         }
 
-        public PublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes)
+        public IPublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes)
         {
             return AddDescriptor(new PublishingCommandsDescriptor(this, commandsTypes));
         }

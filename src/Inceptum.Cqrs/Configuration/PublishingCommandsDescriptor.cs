@@ -3,7 +3,12 @@ using System.Collections.Generic;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public class PublishingCommandsDescriptor : PublishingRouteDescriptor<PublishingCommandsDescriptor>
+    public interface IPublishingCommandsDescriptor
+    {
+        IPublishingRouteDescriptor<PublishingCommandsDescriptor> To(string boundedContext);
+    }
+
+    public class PublishingCommandsDescriptor : PublishingRouteDescriptor<PublishingCommandsDescriptor>, IPublishingCommandsDescriptor
     {
         private string m_BoundedContext;
         private readonly Type[] m_CommandsTypes;
@@ -53,7 +58,7 @@ namespace Inceptum.Cqrs.Configuration
 
         }
 
-        public IPublishingRouteDescriptor<PublishingCommandsDescriptor> To(string boundedContext)
+        IPublishingRouteDescriptor<PublishingCommandsDescriptor> IPublishingCommandsDescriptor.To(string boundedContext)
         {
             m_BoundedContext = boundedContext;
             return this;

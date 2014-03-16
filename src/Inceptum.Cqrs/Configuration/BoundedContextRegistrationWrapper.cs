@@ -29,7 +29,7 @@ namespace Inceptum.Cqrs.Configuration
             get { return m_Registration.BoundedContextName; }
         }
 
-        public PublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes)
+        public IPublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes)
         {
             return m_Registration.PublishingCommands(commandsTypes);
         }

@@ -12,7 +12,7 @@ namespace Inceptum.Cqrs.Configuration
         long FailedCommandRetryDelayInternal{get; set; }
 
         IBoundedContextRegistration FailedCommandRetryDelay(long delay);
-        PublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes);
+        IPublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes);
         IListeningEventsDescriptor ListeningEvents(params Type[] type);
         IListeningRouteDescriptor<ListeningCommandsDescriptor> ListeningCommands(params Type[] type);
         IPublishingRouteDescriptor<PublishingEventsDescriptor> PublishingEvents(params Type[] type);
