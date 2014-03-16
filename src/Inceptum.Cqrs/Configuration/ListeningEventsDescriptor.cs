@@ -3,7 +3,12 @@ using System.Collections.Generic;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public class ListeningEventsDescriptor : ListeningRouteDescriptor<ListeningEventsDescriptor>
+    public interface IListeningEventsDescriptor
+    {
+        IListeningRouteDescriptor<ListeningEventsDescriptor> From(string boundedContext);
+    }
+
+    public class ListeningEventsDescriptor : ListeningRouteDescriptor<ListeningEventsDescriptor>, IListeningEventsDescriptor
     {
         private string m_BoundedContext;
         private readonly Type[] m_Types;
@@ -14,7 +19,7 @@ namespace Inceptum.Cqrs.Configuration
             Descriptor = this;
         }
 
-        public IListeningRouteDescriptor<ListeningEventsDescriptor> From(string boundedContext)
+        IListeningRouteDescriptor<ListeningEventsDescriptor> IListeningEventsDescriptor.From(string boundedContext)
         {
             m_BoundedContext = boundedContext;
             return this;
@@ -37,5 +42,6 @@ namespace Inceptum.Cqrs.Configuration
                 boundedContext.Routes[Route].AddSubscribedEvent(type, 0,m_BoundedContext,endpointResolver);
             }
         }
+
     }
 }

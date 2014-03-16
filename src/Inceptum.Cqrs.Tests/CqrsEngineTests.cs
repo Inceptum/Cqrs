@@ -203,7 +203,7 @@ namespace Inceptum.Cqrs.Tests
        
 
         [Test]
-        public void NewFluentApiPrototypeTest()
+        public void FluentApiTest()
         {
             var endpointProvider = MockRepository.GenerateMock<IEndpointProvider>();
             endpointProvider.Expect(r => r.Get("high")).Return(new Endpoint("InMemory", "high", true, "json"));
@@ -215,12 +215,7 @@ namespace Inceptum.Cqrs.Tests
                     new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"InMemory", new TransportInfo("none", "none", "none", null, "InMemory")}
-                    }),
-                    new Dictionary<string, ProcessingGroupInfo>
-                    {
-                        {"prioritizedCommandsRoute", new ProcessingGroupInfo() {ConcurrencyLevel = 2}},
-                        {"explicitlyPrioritizedCommandsRoute", new ProcessingGroupInfo() {ConcurrencyLevel = 2}}
-                    });
+                    }));
             using (messagingEngine)
             {
                 
@@ -249,7 +244,7 @@ namespace Inceptum.Cqrs.Tests
                     .ListeningCommands(typeof(string)).On("prioritizedCommandsRoute")
                         .Prioritized(lowestPriority: 2)
                     .ProcessingOptions("explicitlyPrioritizedCommandsRoute").MultiThreaded(10)
-                    .ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10)
+                    .ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10).QueueCapacity(1024)
                );
             }
         }

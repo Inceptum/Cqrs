@@ -34,7 +34,7 @@ namespace Inceptum.Cqrs.Configuration
             return m_Registration.PublishingCommands(commandsTypes);
         }
 
-        public ListeningEventsDescriptor ListeningEvents(params Type[] types)
+        public IListeningEventsDescriptor ListeningEvents(params Type[] types)
         {
             return m_Registration.ListeningEvents(types);
         }

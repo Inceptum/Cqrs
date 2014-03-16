@@ -5,6 +5,7 @@ using NEventStore.Dispatcher;
 
 namespace Inceptum.Cqrs.Configuration
 {
+
     public interface IBoundedContextRegistration : IRegistration, IHideObjectMembers
     {
         string BoundedContextName { get; }
@@ -12,7 +13,7 @@ namespace Inceptum.Cqrs.Configuration
 
         IBoundedContextRegistration FailedCommandRetryDelay(long delay);
         PublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes);
-        ListeningEventsDescriptor ListeningEvents(params Type[] type);
+        IListeningEventsDescriptor ListeningEvents(params Type[] type);
         IListeningRouteDescriptor<ListeningCommandsDescriptor> ListeningCommands(params Type[] type);
         IPublishingRouteDescriptor<PublishingEventsDescriptor> PublishingEvents(params Type[] type);
         ProcessingOptionsDescriptor ProcessingOptions(string route);

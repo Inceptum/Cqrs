@@ -33,7 +33,7 @@ namespace Inceptum.Cqrs.Configuration
             return AddDescriptor(new PublishingCommandsDescriptor(this, commandsTypes));
         }
 
-        public ListeningEventsDescriptor ListeningEvents(params Type[] types)
+        public IListeningEventsDescriptor ListeningEvents(params Type[] types)
         {
             return AddDescriptor(new ListeningEventsDescriptor(this, types));
         }
