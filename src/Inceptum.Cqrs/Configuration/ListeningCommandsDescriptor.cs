@@ -6,6 +6,7 @@ namespace Inceptum.Cqrs.Configuration
     public class ListeningCommandsDescriptor<TRegistration> : ListeningRouteDescriptor<ListeningCommandsDescriptor<TRegistration>, TRegistration>
         where TRegistration : IRegistration
     {
+        private MapEndpointResolver m_EndpointResolver;
         public Type[] Types { get; private set; }
 
         public ListeningCommandsDescriptor(TRegistration registration, Type[] types)
@@ -21,22 +22,16 @@ namespace Inceptum.Cqrs.Configuration
             return new Type[0];
         }
 
-        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
-        {
-        }
-
-
-
         public ListeningCommandsDescriptor<TRegistration> Prioritized(uint lowestPriority)
         {
             LowestPriority = lowestPriority;
+
             return this;
         }
 
-
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
+            m_EndpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors);
 
             foreach (var type in Types)
             {
@@ -44,16 +39,20 @@ namespace Inceptum.Cqrs.Configuration
                 {
                     for (uint priority = 1; priority <= LowestPriority; priority++)
                     {
-                        boundedContext.Routes[Route].AddSubscribedCommand(type, priority, endpointResolver);
+                        boundedContext.Routes[Route].AddSubscribedCommand(type, priority, m_EndpointResolver);
                     }
                 }
                 else
                 {
-                    boundedContext.Routes[Route].AddSubscribedCommand(type, 0, endpointResolver);
+                    boundedContext.Routes[Route].AddSubscribedCommand(type, 0, m_EndpointResolver);
                 }
             }
         }
- 
 
+
+        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        {
+            m_EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
+        }
     }
 }

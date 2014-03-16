@@ -22,15 +22,7 @@ namespace Castle.MicroKernel.Registration
                     IsCommandsHandler = true
                 });
         }
-        public static ComponentRegistration<T> AsSaga<T>(this ComponentRegistration<T> registration, string hostingBoundContext, params string[] boundedContexts) where T : class
-        {
-            return registration.ExtendedProperties(new
-                {
-                    ListenedBoundContexts = boundedContexts,
-                    IsSaga = true,
-                    BoundContext = hostingBoundContext
-                });
-        }
+     
 
         public static ComponentRegistration<T> AsProcess<T>(this ComponentRegistration<T> registration, string hostingBoundContext) where T : class
         {

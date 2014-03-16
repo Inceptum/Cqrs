@@ -53,11 +53,30 @@ namespace Inceptum.Cqrs.Configuration
 
 
 
+    public static class SagaRegistrationWrapperExtensions
+    {
+        public static IPublishingCommandsDescriptor<ISagaRegistration> PublishingCommands(this IRegistrationWrapper<ISagaRegistration> wrapper, params Type[] commandsTypes)
+        {
+            return wrapper.Registration.PublishingCommands(commandsTypes);
+        }
+
+        public static IListeningEventsDescriptor<ISagaRegistration> ListeningEvents(this IRegistrationWrapper<ISagaRegistration> wrapper, params Type[] types)
+        {
+            return wrapper.Registration.ListeningEvents(types);
+        }
+
+        public static ProcessingOptionsDescriptor<ISagaRegistration> ProcessingOptions(this IRegistrationWrapper<ISagaRegistration> wrapper, string route)
+        {
+            return wrapper.Registration.ProcessingOptions(route);
+        }
+
+    }
+
     public static class BoundedContextRegistrationWrapperExtensions
     {
 
 
-        public static IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, params Type[] commandsTypes)
+        public static IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, params Type[] commandsTypes) 
         {
             return wrapper.Registration.PublishingCommands(commandsTypes);
         }
@@ -142,19 +161,6 @@ namespace Inceptum.Cqrs.Configuration
             return wrapper.Registration.WithProcess<TProcess>();
         }
 
-        public static IBoundedContextRegistration WithSaga(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, object saga, params string[] listenedBoundContext)
-        {
-            return wrapper.Registration.WithSaga(saga, listenedBoundContext);
-        }
-
-        public static IBoundedContextRegistration WithSaga(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Type saga, params string[] listenedBoundContext)
-        {
-            return wrapper.Registration.WithSaga(saga, listenedBoundContext);
-        }
-
-        public static IBoundedContextRegistration WithSaga<T>(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, params string[] listenedBoundContext)
-        {
-            return wrapper.Registration.WithSaga<T>(listenedBoundContext);
-        }
+       
     }
 }

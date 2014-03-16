@@ -39,12 +39,16 @@ namespace Inceptum.Cqrs
 
     public class MapEndpointResolver : IEndpointResolver
     {
-        private readonly IEndpointResolver m_FallbackResolver;
+        private IEndpointResolver m_FallbackResolver;
         private readonly Dictionary<Func<RoutingKey, bool>, string> m_Map;
 
-        public MapEndpointResolver(Dictionary<Func<RoutingKey, bool>, string> map, IEndpointResolver fallbackResolver)
+        public MapEndpointResolver(Dictionary<Func<RoutingKey, bool>, string> map)
         {
             m_Map = map;
+        }
+
+        internal void SetFallbackResolver(IEndpointResolver fallbackResolver)
+        {
             m_FallbackResolver = fallbackResolver;
         }
 

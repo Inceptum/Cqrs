@@ -14,6 +14,7 @@ namespace Inceptum.Cqrs.Configuration
     {
         private string m_BoundedContext;
         private readonly Type[] m_CommandsTypes;
+        private MapEndpointResolver m_EndpointResolver;
 
         public PublishingCommandsDescriptor(TRegistration registration, Type[] commandsTypes):base(registration)
         {
@@ -26,38 +27,10 @@ namespace Inceptum.Cqrs.Configuration
             return new Type[0];
         }
 
-        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
-        {
-             
-        }
-
-
         public PublishingCommandsDescriptor<TRegistration> Prioritized(uint lowestPriority)
         {
             LowestPriority = lowestPriority;
             return this;
-        }
-
-
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
-        {
-            var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
-            foreach (var type in m_CommandsTypes)
-            {
-                if (LowestPriority > 0)
-                {
-                    for (uint priority = 1; priority <= LowestPriority; priority++)
-                    {
-                        boundedContext.Routes[Route].AddPublishedCommand(type, priority, m_BoundedContext, endpointResolver);
-                    }
-                }
-                else
-                {
-                    boundedContext.Routes[Route].AddPublishedCommand(type, 0, m_BoundedContext, endpointResolver);
-                    
-                }
-            }
-
         }
 
         IPublishingRouteDescriptor<PublishingCommandsDescriptor<TRegistration>> IPublishingCommandsDescriptor<TRegistration>.To(string boundedContext)
@@ -66,6 +39,30 @@ namespace Inceptum.Cqrs.Configuration
             return this;
         }
 
-       
+        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        {
+            m_EndpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors);
+            foreach (var type in m_CommandsTypes)
+            {
+                if (LowestPriority > 0)
+                {
+                    for (uint priority = 1; priority <= LowestPriority; priority++)
+                    {
+                        boundedContext.Routes[Route].AddPublishedCommand(type, priority, m_BoundedContext, m_EndpointResolver);
+                    }
+                }
+                else
+                {
+                    boundedContext.Routes[Route].AddPublishedCommand(type, 0, m_BoundedContext, m_EndpointResolver);
+
+                }
+            }
+        }
+
+
+        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        {
+            m_EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
+        }
     }
 }

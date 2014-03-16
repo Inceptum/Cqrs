@@ -112,7 +112,7 @@ namespace Inceptum.Cqrs.Routing
 
         public Route(string name, string boundedContext)
         {
-           ProcessingGroup=new ProcessingGroupInfo();
+            ProcessingGroup=new ProcessingGroupInfo();
             m_BoundedContext = boundedContext;
             Name = name;
         }
@@ -120,6 +120,12 @@ namespace Inceptum.Cqrs.Routing
         public IDictionary<RoutingKey, Endpoint> MessageRoutes
         {
             get { return new ReadOnlyDictionary<RoutingKey, Endpoint>(m_MessageRoutes); }
+        }
+
+
+        public RoutingKey[] RoutingKeys
+        {
+            get { return m_RouteResolvers.Keys.ToArray(); }
         }
 
         public string ProcessingGroupName

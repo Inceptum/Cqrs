@@ -8,14 +8,14 @@ namespace Inceptum.Cqrs.Configuration
         {
             route = route ?? descriptor.Route;
             IRegistrationWrapper<IBoundedContextRegistration> wrapper = descriptor;
-            return descriptor.PublishingCommands(descriptor.Types).To(wrapper.Registration.BoundedContextName).With(route);
+            return descriptor.PublishingCommands(descriptor.Types).To(wrapper.Registration.Name).With(route);
         }
 
         public static ListeningEventsDescriptor<IBoundedContextRegistration> WithLoopback(this PublishingEventsDescriptor<IBoundedContextRegistration> descriptor, string route = null)
         {
             route = route ?? descriptor.Route;
             IRegistrationWrapper<IBoundedContextRegistration> wrapper = descriptor;
-            return descriptor.ListeningEvents(descriptor.Types).From(wrapper.Registration.BoundedContextName).On(route);
+            return descriptor.ListeningEvents(descriptor.Types).From(wrapper.Registration.Name).On(route);
         }
 
         public static IListeningRouteDescriptor<ListeningCommandsDescriptor<IBoundedContextRegistration>> ListeningInfrastructureCommands(this IBoundedContextRegistration registration)

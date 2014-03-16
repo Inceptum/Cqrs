@@ -6,6 +6,7 @@ namespace Inceptum.Cqrs.Configuration
     public class PublishingEventsDescriptor<TRegistration> : PublishingRouteDescriptor<PublishingEventsDescriptor<TRegistration>, TRegistration> 
         where TRegistration : IRegistration
     {
+        private MapEndpointResolver m_EndpointResolver;
         public Type[] Types { get; private set; }
 
         public PublishingEventsDescriptor(TRegistration registration, Type[] types)
@@ -22,16 +23,16 @@ namespace Inceptum.Cqrs.Configuration
 
         public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-           
+            m_EndpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors);
+            foreach (var eventType in Types)
+            {
+                boundedContext.Routes[Route].AddPublishedEvent(eventType, 0, m_EndpointResolver);
+            }
         }
 
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
-            foreach (var eventType in Types)
-            {
-                var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
-                boundedContext.Routes[Route].AddPublishedEvent(eventType, 0, endpointResolver);
-            }
+            m_EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
         }
     }
 }

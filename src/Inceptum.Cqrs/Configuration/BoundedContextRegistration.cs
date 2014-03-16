@@ -7,19 +7,45 @@ using NEventStore.Dispatcher;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public class BoundedContextRegistration : IBoundedContextRegistration
+    public abstract class ContextRegistrationBase<TRegistration> : IRegistration where TRegistration : class, IRegistration
     {
-        public string BoundedContextName { get; private set; }
+        public string Name { get; private set; }
         private readonly List<IBoundedContextDescriptor> m_Descriptors = new List<IBoundedContextDescriptor>();
-        private Type[] m_Dependencies=new Type[0];
+        private Type[] m_Dependencies = new Type[0];
 
-        public BoundedContextRegistration(string boundedContextName)
+        protected ContextRegistrationBase(string name)
         {
-            BoundedContextName = boundedContextName;
-            AddDescriptor(new InfrastructureCommandsHandlerDescriptor());
+            Name = name;
         }
 
-        public long FailedCommandRetryDelayInternal { get; set; }
+
+        void IRegistration.Create(CqrsEngine cqrsEngine)
+        {
+            var context = CreateContext(cqrsEngine);
+            foreach (var descriptor in m_Descriptors)
+            {
+                descriptor.Create(context, cqrsEngine.DependencyResolver);
+            }
+            cqrsEngine.BoundedContexts.Add(context);
+
+        }
+
+        protected abstract BoundedContext CreateContext(CqrsEngine cqrsEngine);
+
+        void IRegistration.Process(CqrsEngine cqrsEngine)
+        {
+            var context = cqrsEngine.BoundedContexts.FirstOrDefault(bc => bc.Name == Name);
+            foreach (var descriptor in m_Descriptors)
+            {
+                descriptor.Process(context, cqrsEngine);
+            }
+        }
+
+        IEnumerable<Type> IRegistration.Dependencies
+        {
+            get { return m_Dependencies; }
+        }
+
 
         protected T AddDescriptor<T>(T descriptor) where T : IBoundedContextDescriptor
         {
@@ -28,15 +54,87 @@ namespace Inceptum.Cqrs.Configuration
             return descriptor;
         }
 
-        public IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(params Type[] commandsTypes)
+
+        public IListeningEventsDescriptor<TRegistration> ListeningEvents(params Type[] types)
         {
-            return AddDescriptor(new PublishingCommandsDescriptor<IBoundedContextRegistration>(this, commandsTypes));
+            return AddDescriptor(new ListeningEventsDescriptor<TRegistration>(this as TRegistration, types));
         }
 
-        public IListeningEventsDescriptor<IBoundedContextRegistration> ListeningEvents(params Type[] types)
+        public IPublishingCommandsDescriptor<TRegistration> PublishingCommands(params Type[] commandsTypes)
         {
-            return AddDescriptor(new ListeningEventsDescriptor<IBoundedContextRegistration>(this, types));
+            return AddDescriptor(new PublishingCommandsDescriptor<TRegistration>(this as TRegistration, commandsTypes));
         }
+
+        public ProcessingOptionsDescriptor<TRegistration> ProcessingOptions(string route)
+        {
+            return AddDescriptor(new ProcessingOptionsDescriptor<TRegistration>(this as TRegistration, route));
+        }
+    }
+
+    internal class SagaDescriptor : DescriptorWithDependencies
+    {
+        public SagaDescriptor(object saga)
+            : base(saga)
+        {
+
+        }
+        public SagaDescriptor(Type saga)
+            : base(saga)
+        {
+           
+        }
+
+        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        {
+            //Wire saga to handle events from all subscribed bounded contexts
+            IEnumerable<string> listenedBoundedContexts = boundedContext
+                                                                        .SelectMany(r=>r.RoutingKeys)
+                                                                        .Where(k=>k.CommunicationType==CommunicationType.Subscribe && k.RouteType==RouteType.Events)
+                                                                        .Select(k=>k.RemoteBoundedContext)
+                                                                        .Distinct()
+                                                                        .ToArray();
+            foreach (var saga in ResolvedDependencies)
+            {
+                foreach (var listenedBoundedContext in listenedBoundedContexts)
+                {
+                    boundedContext.EventDispatcher.Wire(listenedBoundedContext, saga, new OptionalParameter<ICommandSender>(boundedContext));
+                }
+            }
+
+        }
+    }
+
+    public class SagaRegistration : ContextRegistrationBase<ISagaRegistration>, ISagaRegistration
+    {
+        public SagaRegistration(string name, Type type) : base(name)
+        {
+            AddDescriptor(new SagaDescriptor(type));
+        }
+
+        protected override BoundedContext CreateContext(CqrsEngine cqrsEngine)
+        {
+            //TODO: introduce saga class
+            return new BoundedContext(cqrsEngine, Name, 0);
+        }
+
+    }
+
+    public class BoundedContextRegistration : ContextRegistrationBase<IBoundedContextRegistration>, IBoundedContextRegistration
+    {
+         
+        public BoundedContextRegistration(string name):base(name)
+        {
+            
+            AddDescriptor(new InfrastructureCommandsHandlerDescriptor());
+        }
+
+        public long FailedCommandRetryDelayInternal { get; set; }
+        protected override BoundedContext CreateContext(CqrsEngine cqrsEngine)
+        {
+            return new BoundedContext(cqrsEngine, Name, FailedCommandRetryDelayInternal);
+        }
+ 
+       
 
         public IListeningRouteDescriptor<ListeningCommandsDescriptor<IBoundedContextRegistration>> ListeningCommands(params Type[] types)
         {
@@ -47,12 +145,7 @@ namespace Inceptum.Cqrs.Configuration
         {
             return AddDescriptor(new PublishingEventsDescriptor<IBoundedContextRegistration>(this, types));
         }
-
-        public ProcessingOptionsDescriptor<IBoundedContextRegistration> ProcessingOptions(string route)
-        {
-            return AddDescriptor(new ProcessingOptionsDescriptor<IBoundedContextRegistration>(this, route));
-        }
-
+ 
 
         public IBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
         {
@@ -72,26 +165,6 @@ namespace Inceptum.Cqrs.Configuration
             return this;
         }
 
-
-        void IRegistration.Create(CqrsEngine cqrsEngine)
-        {
-            var boundedContext = new BoundedContext(cqrsEngine, BoundedContextName,FailedCommandRetryDelayInternal);
-            foreach (var descriptor in m_Descriptors)
-            {
-                descriptor.Create(boundedContext, cqrsEngine.DependencyResolver);
-            }
-            cqrsEngine.BoundedContexts.Add(boundedContext);
-
-        }
-
-        void IRegistration.Process(CqrsEngine cqrsEngine)
-        {
-            var boundedContext = cqrsEngine.BoundedContexts.FirstOrDefault(bc => bc.Name == BoundedContextName);
-            foreach (var descriptor in m_Descriptors)
-            {
-                descriptor.Process(boundedContext, cqrsEngine);
-            }
-        }
 
         public IBoundedContextRegistration WithCommandsHandler(object handler)
         {
@@ -119,38 +192,8 @@ namespace Inceptum.Cqrs.Configuration
         }
 
 
-
-
-        public IBoundedContextRegistration WithSaga(object saga,params string[] listenedBoundContext)
-        {
-            registerSaga(saga, listenedBoundContext);
-            return this;
-        }
-
-        public IBoundedContextRegistration WithSaga(Type saga,params string[] listenedBoundContext)
-        {
-            registerSaga(saga, listenedBoundContext);
-            return this;
-        }
-
-        public IBoundedContextRegistration WithSaga<T>(params string[] listenedBoundContext)
-        {
-            registerSaga(typeof(T), listenedBoundContext);
-            return this;
-        }
-
-        private void registerSaga(object saga, string[] listenedBoundContext)
-        {
-            if (saga == null) throw new ArgumentNullException("saga");
-            AddDescriptor(new SagaDescriptor(saga, listenedBoundContext));
-        }
-
-        private void registerSaga(Type saga, string[] listenedBoundContext)
-        {
-            if (saga == null) throw new ArgumentNullException("saga");
-            AddDescriptor(new SagaDescriptor(saga, listenedBoundContext));
-        }
          
+
 
 
         public IBoundedContextRegistration WithProjection(object projection, string fromBoundContext)
@@ -201,9 +244,5 @@ namespace Inceptum.Cqrs.Configuration
             return WithProcess(typeof(TProcess));
         }
 
-        IEnumerable<Type> IRegistration.Dependencies
-        {
-            get { return m_Dependencies; }
-        }
     }
 }

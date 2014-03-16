@@ -6,31 +6,28 @@ using NEventStore.Dispatcher;
 namespace Inceptum.Cqrs.Configuration
 {
 
-    public class Saga 
+    public class Saga<TSaga>
     {
-  /*      public static ISagaRegistration Named(string name)
+        public static ISagaRegistration Named(string name)
         {
-            
-        }*/
+            return new SagaRegistration(name,typeof(TSaga));
+        }
     }
 
-/*
-
+   
 
     public interface ISagaRegistration : IRegistration, IHideObjectMembers
     {
         string Name { get; }
-        ListeningEventsDescriptor ListeningEvents(params Type[] type);
-        PublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes);
-
-        ProcessingOptionsDescriptor ProcessingOptions(string route);
+        IListeningEventsDescriptor<ISagaRegistration> ListeningEvents(params Type[] types);
+        IPublishingCommandsDescriptor<ISagaRegistration> PublishingCommands(params Type[] commandsTypes);
+        ProcessingOptionsDescriptor<ISagaRegistration> ProcessingOptions(string route);
     }
-*/
-
+ 
 
     public interface IBoundedContextRegistration : IRegistration, IHideObjectMembers
     {
-        string BoundedContextName { get; }
+        string Name { get; }
         long FailedCommandRetryDelayInternal { get; set; }
 
         IBoundedContextRegistration FailedCommandRetryDelay(long delay);
@@ -63,10 +60,7 @@ namespace Inceptum.Cqrs.Configuration
         IBoundedContextRegistration WithProcess(Type process);
         IBoundedContextRegistration WithProcess<TProcess>() where TProcess : IProcess;
 
-
-        IBoundedContextRegistration WithSaga(object saga, params string[] listenedBoundContext);
-        IBoundedContextRegistration WithSaga(Type saga, params string[] listenedBoundContext);
-        IBoundedContextRegistration WithSaga<T>(params string[] listenedBoundContext);
+ 
 
     }
 }

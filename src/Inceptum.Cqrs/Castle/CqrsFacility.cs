@@ -130,17 +130,6 @@ namespace Inceptum.Cqrs.Castle
  
            } 
 
-            if (isSaga)
-            {
-                var listenedBoundContexts = (string[])(handler.ComponentModel.ExtendedProperties["ListenedBoundContexts"]);
-                var boundContext = (string)(handler.ComponentModel.ExtendedProperties["BoundContext"]);
-                var registration = findBoundedContext( boundContext);
-                if (registration == null)
-                        throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
-                registration.WithSaga(handler.ComponentModel.Services.First(), listenedBoundContexts);
-
-            }
-
             if (isProcess)
             {
                 var processFor = (string)(handler.ComponentModel.ExtendedProperties["ProcessFor"]);
@@ -158,7 +147,7 @@ namespace Inceptum.Cqrs.Castle
 
             return m_BoundedContexts.Where(r => r is IBoundedContextRegistration).Cast<IBoundedContextRegistration>()
                 .Concat(m_BoundedContexts.Where(r => r is IRegistrationWrapper<IBoundedContextRegistration>).Select(r => (r as IRegistrationWrapper<IBoundedContextRegistration>).Registration))
-                .FirstOrDefault(bc => bc.BoundedContextName == name);
+                .FirstOrDefault(bc => bc.Name == name);
         }
 
         public void Start()

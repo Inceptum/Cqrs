@@ -29,31 +29,5 @@ namespace Inceptum.Cqrs.Configuration
 
 
 
-    internal class SagaDescriptor : DescriptorWithDependencies
-    {
-        private readonly string[] m_ListenedBoundContext;
-
-        public SagaDescriptor(object saga, params string[] listenedBoundContext):base(saga)
-        {
-            m_ListenedBoundContext = listenedBoundContext;
-        }
-        public SagaDescriptor(Type saga, params string[] listenedBoundContext)
-            : base(saga)
-        {
-            m_ListenedBoundContext = listenedBoundContext;
-        }
-
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
-        {
-            foreach (var saga in ResolvedDependencies)
-            {
-                foreach (var listenedBoundedContext in m_ListenedBoundContext)
-                {
-                    boundedContext.EventDispatcher.Wire(listenedBoundedContext, saga, new OptionalParameter<ICommandSender>(boundedContext));    
-                }
-                
-            }
- 
-        }
-    }
+    
 }

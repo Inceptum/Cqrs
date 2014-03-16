@@ -198,6 +198,42 @@ namespace Inceptum.Cqrs.Tests
             }
         }
 
+        [Test]
+        public void SagaTest()
+        {
+            using (
+                var messagingEngine =
+                    new MessagingEngine(
+                        new TransportResolver(new Dictionary<string, TransportInfo>
+                            {
+                                {"InMemory", new TransportInfo("none", "none", "none", null, "InMemory")}
+                            })))
+            {
+                var commandHandler = new CommandHandler();
+                using (var engine = new CqrsEngine(messagingEngine,
+                                                   new InMemoryEndpointResolver(),
+                                                   BoundedContext.Named("bc1")
+                                                        .PublishingEvents(typeof (int)).With("events1").WithLoopback()
+                                                        .ListeningCommands(typeof(string)).On("commands1").WithLoopback()
+                                                        .WithCommandsHandler<CommandHandler>(),
+                                                   BoundedContext.Named("bc2")
+                                                        .PublishingEvents(typeof (int)).With("events2").WithLoopback()
+                                                        .ListeningCommands(typeof(string)).On("commands2").WithLoopback()
+                                                        .WithCommandsHandler<CommandHandler>(),
+                                                   Saga<TestSaga>.Named("SomeIntegration")
+                                                        .ListeningEvents(typeof(int)).From("bc1").On("events1")
+                                                        .ListeningEvents(typeof(int)).From("bc2").On("events2")
+                                                        .PublishingCommands(typeof(string)).To("bc2").With("commands2")
+                                                        .ProcessingOptions("commands").MultiThreaded(5))
+                    )
+                {
+                    messagingEngine.Send("cmd", new Endpoint("InMemory", "commands1", serializationFormat: "json"));
+                  
+                    Assert.That(TestSaga.Complete.WaitOne(1000), Is.True, "Saga has not got events or failed to send command");
+                }
+            }
+        }
+
 
 
        
@@ -308,9 +344,11 @@ namespace Inceptum.Cqrs.Tests
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.remoteEvents"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.localCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.remoteCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.SomeIntegration.sagaEvents"), Arg<ProcessingGroupInfo>.Is.Anything));
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.SomeIntegration.sagaCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.prioritizedCommands"), Arg<ProcessingGroupInfo>.Matches(info => info.ConcurrencyLevel==2)));
             string error;
-            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(15);
+            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(17);
             //subscription for remote events
             messagingEngine.Expect(e => e.Subscribe(
                 Arg<Endpoint>.Is.Anything,
@@ -353,7 +391,17 @@ namespace Inceptum.Cqrs.Tests
                 Arg<string>.Is.Equal("cqrs.operations.prioritizedCommands"),
                 Arg<int>.Is.Equal(2),
                 Arg<Type[]>.List.Equal(new[] { typeof(byte) }))).Return(Disposable.Empty);
-          
+
+            //subscription for saga events
+            messagingEngine.Expect(e => e.Subscribe(
+                Arg<Endpoint>.Is.Anything,
+                Arg<CallbackDelegate<object>>.Is.Anything,
+                Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
+                Arg<string>.Is.Equal("cqrs.SomeIntegration.sagaEvents"),
+                Arg<int>.Is.Equal(0),
+                Arg<Type[]>.List.Equal(new[] { typeof(int) }))).Return(Disposable.Empty);       
+
+            
             //send command to remote BC
             messagingEngine.Expect(e => e.Send(
                 Arg<object>.Is.Equal("testCommand"),
@@ -377,7 +425,11 @@ namespace Inceptum.Cqrs.Tests
                         .ListeningCommands(typeof(byte)).On("prioritizedCommands").Prioritized(2)
                         .ListeningEvents(typeof(int), typeof(long)).From("integration").On("remoteEvents")
                         .PublishingCommands(typeof(string)).To("integration").With("remoteCommands").Prioritized(5)
-                        .ProcessingOptions("prioritizedCommands").MultiThreaded(2)
+                        .ProcessingOptions("prioritizedCommands").MultiThreaded(2),
+                    Saga<TestSaga>.Named("SomeIntegration")
+                        .ListeningEvents(typeof(int)).From("bc1").On("sagaEvents")
+                        .PublishingCommands(typeof(string)).To("bc2").With("sagaCommands")
+                       // .ProcessingOptions("commands").MultiThreaded(5)
                     ))
                 {
                     ce.BoundedContexts.Find(bc=>bc.Name=="operations").EventsPublisher.PublishEvent(true);

@@ -14,6 +14,7 @@ namespace Inceptum.Cqrs.Configuration
     {
         private string m_BoundedContext;
         private readonly Type[] m_Types;
+        private MapEndpointResolver m_EndpointResolver;
 
         public ListeningEventsDescriptor(TRegistration registration, Type[] types)
             : base(registration)
@@ -35,15 +36,16 @@ namespace Inceptum.Cqrs.Configuration
 
         public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
+            m_EndpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors);
+            foreach (var type in m_Types)
+            {
+                boundedContext.Routes[Route].AddSubscribedEvent(type, 0, m_BoundedContext, m_EndpointResolver);
+            }
         }
 
         public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
         {
-            foreach (var type in m_Types)
-            {
-                var endpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors, cqrsEngine.EndpointResolver);
-                boundedContext.Routes[Route].AddSubscribedEvent(type, 0,m_BoundedContext,endpointResolver);
-            }
+            m_EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
         }
 
     }
