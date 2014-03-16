@@ -21,7 +21,7 @@ namespace Inceptum.Cqrs.Configuration
             return registration.ListeningCommands(typeof(ReplayEventsCommand));
         }
 
-        public static PublishingCommandsDescriptor PublishingInfrastructureCommands(this IBoundedContextRegistration registration)
+        public static IPublishingCommandsDescriptor PublishingInfrastructureCommands(this IBoundedContextRegistration registration)
         {
             return registration.PublishingCommands(typeof(ReplayEventsCommand));
         }
