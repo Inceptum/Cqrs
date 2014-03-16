@@ -195,7 +195,7 @@ namespace Inceptum.Cqrs
             {
                 foreach (var route in boundedContext)
                 {
-                    m_MessagingEngine.AddProcessingGroup(route.ProcessingGroupName,new ProcessingGroupInfo{ConcurrencyLevel = route.ConcurrencyLevel});
+                    m_MessagingEngine.AddProcessingGroup(route.ProcessingGroupName,route.ProcessingGroup);
                 }
             }
 

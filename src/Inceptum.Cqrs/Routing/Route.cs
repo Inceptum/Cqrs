@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Configuration;
 using System.Globalization;
 using System.Linq;
+using Inceptum.Messaging;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 
@@ -107,11 +108,11 @@ namespace Inceptum.Cqrs.Routing
         public string Name { get; set; }
         public RouteType? Type { get; set; }
 
-        //TODO:: need to pass it as processing group concurrency level to messagingEngine
-        public uint ConcurrencyLevel { get; set; }
+       
 
         public Route(string name, string boundedContext)
         {
+           ProcessingGroup=new ProcessingGroupInfo();
             m_BoundedContext = boundedContext;
             Name = name;
         }
@@ -125,6 +126,8 @@ namespace Inceptum.Cqrs.Routing
         {
             get { return string.Format("cqrs.{0}.{1}", m_BoundedContext, Name); }
         }
+
+        public ProcessingGroupInfo ProcessingGroup { get; set; }
 
         public void AddPublishedCommand(Type command, uint priority,string boundedContext, IEndpointResolver resolver)
         {

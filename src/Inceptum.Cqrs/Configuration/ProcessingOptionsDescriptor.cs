@@ -7,6 +7,7 @@ namespace Inceptum.Cqrs.Configuration
     {
         private readonly string m_Route;
         private uint m_ThreadCount;
+        private uint? m_QueueCapacity;
 
         public ProcessingOptionsDescriptor(BoundedContextRegistration registration, string route) : base(registration)
         {
@@ -20,7 +21,9 @@ namespace Inceptum.Cqrs.Configuration
 
         public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
         {
-            boundedContext.Routes[m_Route].ConcurrencyLevel = m_ThreadCount;
+            boundedContext.Routes[m_Route].ProcessingGroup.ConcurrencyLevel = m_ThreadCount;
+            if(m_QueueCapacity!=null)
+                boundedContext.Routes[m_Route].ProcessingGroup.QueueCapacity = m_QueueCapacity.Value;
         }
 
         public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
@@ -32,6 +35,11 @@ namespace Inceptum.Cqrs.Configuration
             if (threadCount == 0)
                 throw new ArgumentOutOfRangeException("threadCount", "threadCount should be greater then 0");
             m_ThreadCount = threadCount;
+            return this;
+        }
+        public ProcessingOptionsDescriptor QueueCapacity(uint queueCapacity)
+        {
+            m_QueueCapacity = queueCapacity;
             return this;
         }
     }
