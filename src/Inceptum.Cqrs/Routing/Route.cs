@@ -121,6 +121,11 @@ namespace Inceptum.Cqrs.Routing
             get { return new ReadOnlyDictionary<RoutingKey, Endpoint>(m_MessageRoutes); }
         }
 
+        public string ProcessingGroupName
+        {
+            get { return string.Format("cqrs.{0}.{1}", m_BoundedContext, Name); }
+        }
+
         public void AddPublishedCommand(Type command, uint priority,string boundedContext, IEndpointResolver resolver)
         {
             if(Type==null)

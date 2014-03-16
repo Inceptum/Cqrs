@@ -40,9 +40,10 @@ namespace Inceptum.Cqrs.InfrastructureCommands
             var endpoint = new Endpoint(routedCommand.OriginEndpoint.TransportId, routedCommand.Command.Destination, true, serialization);
 
             var eventsFrom = m_BoundedContext.EventStore.GetEventsFrom(routedCommand.Command.From,routedCommand.Command.Types);
+            var processingGroupName = m_BoundedContext.First(r=>r.Name==routedCommand.OriginRoute).ProcessingGroupName;
             foreach (var @event in eventsFrom)
             {
-                m_CqrsEngine.PublishEvent(@event,endpoint,routedCommand.OriginRoute);
+                m_CqrsEngine.PublishEvent(@event, endpoint, processingGroupName);
             }
         }
     }

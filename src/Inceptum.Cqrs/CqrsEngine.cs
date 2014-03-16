@@ -9,6 +9,7 @@ using Castle.Components.DictionaryAdapter.Xml;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
 using Inceptum.Cqrs.Routing;
+using Inceptum.Messaging;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using NLog;
@@ -147,6 +148,7 @@ namespace Inceptum.Cqrs
 
                     foreach (var subscription in subscriptions)
                     {
+                        var processingGroup = route.ProcessingGroupName;
                         var routeName = route.Name;
                         var endpoint = subscription.endpoint;
                         var remoteBoundedContext = subscription.remoteBoundedContext;
@@ -174,7 +176,7 @@ namespace Inceptum.Cqrs
                                 throw new InvalidOperationException(string.Format("Unknown {0} received: {1}",messageTypeName, type));
                                 //acknowledge(0, true);
                             },
-                            routeName,
+                            processingGroup,
                             (int)subscription.priority,
                             subscription.types));
                     }
@@ -188,7 +190,14 @@ namespace Inceptum.Cqrs
             var errorMessage=new StringBuilder("Some endpoints are not valid:").AppendLine();
             var log = new StringBuilder();
             log.Append("Endpoints verification").AppendLine();
-           
+
+            foreach (var boundedContext in BoundedContexts)
+            {
+                foreach (var route in boundedContext)
+                {
+                    m_MessagingEngine.AddProcessingGroup(route.ProcessingGroupName,new ProcessingGroupInfo{ConcurrencyLevel = route.ConcurrencyLevel});
+                }
+            }
 
 
             foreach (var boundedContext in BoundedContexts)
@@ -295,14 +304,14 @@ namespace Inceptum.Cqrs
                                            messageRoute.Key.RemoteBoundedContext==remoteBoundedContext
                                      select new
                                      {
-                                         routeName = route.Name,
+                                         processingGroup = route.ProcessingGroupName,
                                          endpoint = messageRoute.Value
                                      }).ToArray();
             if (!publishDirections.Any())
                 return false;
             foreach (var direction in publishDirections)
             {
-                m_MessagingEngine.Send(message, direction.endpoint, direction.routeName);
+                m_MessagingEngine.Send(message, direction.endpoint, direction.processingGroup);
             }
             return true;
         }

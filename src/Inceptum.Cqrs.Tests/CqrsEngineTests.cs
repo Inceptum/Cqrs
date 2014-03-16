@@ -267,11 +267,7 @@ namespace Inceptum.Cqrs.Tests
                         new TransportResolver(new Dictionary<string, TransportInfo>
                             {
                                 {"InMemory", new TransportInfo("none", "none", "none", null, "InMemory")}
-                            }),
-                            new Dictionary<string, ProcessingGroupInfo>
-                            {
-                                {"commandsRoute",new ProcessingGroupInfo(){ConcurrencyLevel = 1}}
-                            }))
+                            })))
             {
                 var commandHandler = new CommandHandler(100);
                 using (var engine = new CqrsEngine(messagingEngine,
@@ -311,7 +307,13 @@ namespace Inceptum.Cqrs.Tests
             endpointProvider.Expect(p => p.Contains(null)).IgnoreArguments().Return(false);
          
             var messagingEngine = MockRepository.GenerateStrictMock<IMessagingEngine>();
-                
+
+
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.localEvents"), Arg<ProcessingGroupInfo>.Is.Anything));
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.remoteEvents"), Arg<ProcessingGroupInfo>.Is.Anything));
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.localCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.remoteCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.prioritizedCommands"), Arg<ProcessingGroupInfo>.Matches(info => info.ConcurrencyLevel==2)));
             string error;
             messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(15);
             //subscription for remote events
@@ -319,7 +321,7 @@ namespace Inceptum.Cqrs.Tests
                 Arg<Endpoint>.Is.Anything,
                 Arg<CallbackDelegate<object>>.Is.Anything, 
                 Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
-                Arg<string>.Is.Equal("remoteEvents"),
+                Arg<string>.Is.Equal("cqrs.operations.remoteEvents"),
                 Arg<int>.Is.Equal(0),
                 Arg<Type[]>.List.Equal(new []{typeof(int),typeof(long)}))).Return(Disposable.Empty);       
             
@@ -328,7 +330,7 @@ namespace Inceptum.Cqrs.Tests
                 Arg<Endpoint>.Is.Anything,
                 Arg<CallbackDelegate<object>>.Is.Anything, 
                 Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
-                Arg<string>.Is.Equal("localEvents"),
+                Arg<string>.Is.Equal("cqrs.operations.localEvents"),
                 Arg<int>.Is.Equal(0),
                 Arg<Type[]>.List.Equal(new []{typeof(bool)}))).Return(Disposable.Empty);
            
@@ -337,7 +339,7 @@ namespace Inceptum.Cqrs.Tests
                 Arg<Endpoint>.Is.Anything,
                 Arg<CallbackDelegate<object>>.Is.Anything, 
                 Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
-                Arg<string>.Is.Equal("localCommands"),
+                Arg<string>.Is.Equal("cqrs.operations.localCommands"),
                 Arg<int>.Is.Equal(0),
                 Arg<Type[]>.List.Equal(new[] { typeof(string), typeof(DateTime) }))).Return(Disposable.Empty);
           
@@ -346,14 +348,14 @@ namespace Inceptum.Cqrs.Tests
                 Arg<Endpoint>.Is.Anything,
                 Arg<CallbackDelegate<object>>.Is.Anything, 
                 Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
-                Arg<string>.Is.Equal("prioritizedCommands"),
+                Arg<string>.Is.Equal("cqrs.operations.prioritizedCommands"),
                 Arg<int>.Is.Equal(1),
                 Arg<Type[]>.List.Equal(new[] { typeof(byte) }))).Return(Disposable.Empty);
             messagingEngine.Expect(e => e.Subscribe(
                 Arg<Endpoint>.Is.Anything,
                 Arg<CallbackDelegate<object>>.Is.Anything, 
                 Arg<Action<string, AcknowledgeDelegate>>.Is.Anything,
-                Arg<string>.Is.Equal("prioritizedCommands"),
+                Arg<string>.Is.Equal("cqrs.operations.prioritizedCommands"),
                 Arg<int>.Is.Equal(2),
                 Arg<Type[]>.List.Equal(new[] { typeof(byte) }))).Return(Disposable.Empty);
           
@@ -361,14 +363,14 @@ namespace Inceptum.Cqrs.Tests
             messagingEngine.Expect(e => e.Send(
                 Arg<object>.Is.Equal("testCommand"),
                 Arg<Endpoint>.Is.Anything,
-                Arg<string>.Is.Equal("remoteCommands")
+                Arg<string>.Is.Equal("cqrs.operations.remoteCommands")
                 ));
 
             //publish event from local BC
             messagingEngine.Expect(e => e.Send(
                 Arg<object>.Is.Equal(true),
                 Arg<Endpoint>.Is.Anything,
-                Arg<string>.Is.Equal("localEvents")
+                Arg<string>.Is.Equal("cqrs.operations.localEvents")
                 ));
 
 
@@ -380,6 +382,7 @@ namespace Inceptum.Cqrs.Tests
                         .ListeningCommands(typeof(byte)).On("prioritizedCommands").Prioritized(2)
                         .ListeningEvents(typeof(int), typeof(long)).From("integration").On("remoteEvents")
                         .PublishingCommands(typeof(string)).To("integration").With("remoteCommands").Prioritized(5)
+                        .ProcessingOptions("prioritizedCommands").MultiThreaded(2)
                     ))
                 {
                     ce.BoundedContexts.Find(bc=>bc.Name=="operations").EventsPublisher.PublishEvent(true);
