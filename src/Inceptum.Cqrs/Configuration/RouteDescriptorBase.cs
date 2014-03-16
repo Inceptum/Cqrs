@@ -4,7 +4,7 @@ using Inceptum.Cqrs.Routing;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public abstract class RouteDescriptorBase : BoundedContextRegistrationWrapper
+    public abstract class RouteDescriptorBase<TRegistration> : RegistrationWrapper<TRegistration> where TRegistration : IRegistration
     {
         private readonly Dictionary<Func<RoutingKey, bool>, string> m_ExplicitEndpointSelectors = new Dictionary<Func<RoutingKey, bool>, string>();
 
@@ -15,7 +15,7 @@ namespace Inceptum.Cqrs.Configuration
 
         protected uint LowestPriority { get; set; }
 
-        protected RouteDescriptorBase(BoundedContextRegistration registration)
+        protected RouteDescriptorBase(TRegistration registration)
             : base(registration)
         {
         }
@@ -26,17 +26,20 @@ namespace Inceptum.Cqrs.Configuration
         }
     }
 
-    public abstract class RouteDescriptorBase<T> : RouteDescriptorBase where T :  RouteDescriptorBase
+    public abstract class RouteDescriptorBase<TDescriptor, TRegistration> : RouteDescriptorBase<TRegistration> 
+        where TDescriptor : RouteDescriptorBase<TRegistration> 
+        where TRegistration : IRegistration
     {
 
-        protected RouteDescriptorBase(BoundedContextRegistration registration) : base(registration)
+        protected RouteDescriptorBase(TRegistration registration)
+            : base(registration)
         {
         }
 
 
-        public ExplicitEndpointDescriptor<T> WithEndpoint(string endpoint)
+        public ExplicitEndpointDescriptor<TDescriptor, TRegistration> WithEndpoint(string endpoint)
         {
-            return new ExplicitEndpointDescriptor<T>(endpoint, this as T);
+            return new ExplicitEndpointDescriptor<TDescriptor, TRegistration>(endpoint, this as TDescriptor);
         }
     }
 }

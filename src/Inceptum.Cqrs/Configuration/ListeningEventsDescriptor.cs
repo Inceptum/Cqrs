@@ -3,23 +3,26 @@ using System.Collections.Generic;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public interface IListeningEventsDescriptor
+    public interface IListeningEventsDescriptor<TRegistration> where TRegistration : IRegistration
     {
-        IListeningRouteDescriptor<ListeningEventsDescriptor> From(string boundedContext);
+        IListeningRouteDescriptor<ListeningEventsDescriptor<TRegistration>> From(string boundedContext);
     }
 
-    public class ListeningEventsDescriptor : ListeningRouteDescriptor<ListeningEventsDescriptor>, IListeningEventsDescriptor
+    public class ListeningEventsDescriptor<TRegistration> 
+        : ListeningRouteDescriptor<ListeningEventsDescriptor<TRegistration>,TRegistration>, IListeningEventsDescriptor<TRegistration>
+        where TRegistration : IRegistration
     {
         private string m_BoundedContext;
         private readonly Type[] m_Types;
 
-        public ListeningEventsDescriptor(BoundedContextRegistration registration, Type[] types) : base(registration)
+        public ListeningEventsDescriptor(TRegistration registration, Type[] types)
+            : base(registration)
         {
             m_Types = types;
             Descriptor = this;
         }
 
-        IListeningRouteDescriptor<ListeningEventsDescriptor> IListeningEventsDescriptor.From(string boundedContext)
+        IListeningRouteDescriptor<ListeningEventsDescriptor<TRegistration>> IListeningEventsDescriptor<TRegistration>.From(string boundedContext)
         {
             m_BoundedContext = boundedContext;
             return this;

@@ -42,7 +42,7 @@ namespace Inceptum.Cqrs.Castle
     {
         private readonly string m_EngineComponetName = Guid.NewGuid().ToString();
         private readonly Dictionary<IHandler, Action<IHandler>> m_WaitList = new Dictionary<IHandler, Action<IHandler>>();
-        private IBoundedContextRegistration[] m_BoundedContexts = new IBoundedContextRegistration[0];
+        private IRegistration[] m_BoundedContexts = new IRegistration[0];
         private bool m_InMemory=false;
         private static bool m_CreateMissingEndpoints = false;
 
@@ -52,7 +52,7 @@ namespace Inceptum.Cqrs.Castle
             return this;
         }
 
-        public CqrsFacility BoundedContexts(params IBoundedContextRegistration[] boundedContexts)
+        public CqrsFacility BoundedContexts(params IRegistration[] boundedContexts)
         {
             m_BoundedContexts = boundedContexts;
             return this;
@@ -88,7 +88,7 @@ namespace Inceptum.Cqrs.Castle
         {
             if (handler.ComponentModel.Name == m_EngineComponetName)
             {
-                var dependencyModels = m_BoundedContexts.Cast<IRegistration>().SelectMany(bc => bc.Dependencies).Select(d => new DependencyModel(d.Name, d, false));
+                var dependencyModels = m_BoundedContexts.SelectMany(bc => bc.Dependencies).Select(d => new DependencyModel(d.Name, d, false));
                 foreach (var dependencyModel in dependencyModels)
                 {
                     handler.ComponentModel.Dependencies.Add(dependencyModel);
@@ -108,7 +108,8 @@ namespace Inceptum.Cqrs.Castle
             {
                 var projectedBoundContext = (string)(handler.ComponentModel.ExtendedProperties["ProjectedBoundContext"]);
                 var boundContext = (string)(handler.ComponentModel.ExtendedProperties["BoundContext"]);
-                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == boundContext);
+
+                var registration = findBoundedContext(boundContext);
                 if (registration == null)
                     throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
                
@@ -121,9 +122,8 @@ namespace Inceptum.Cqrs.Castle
            if (isCommandsHandler)
            {
                var commandsHandlerFor = (string)(handler.ComponentModel.ExtendedProperties["CommandsHandlerFor"]);
-
-               var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == commandsHandlerFor);
-               if(registration==null)
+               var registration = findBoundedContext(commandsHandlerFor);
+               if (registration == null)
                    throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered",commandsHandlerFor)); 
               
                registration.WithCommandsHandler(handler.ComponentModel.Services.First());
@@ -134,9 +134,9 @@ namespace Inceptum.Cqrs.Castle
             {
                 var listenedBoundContexts = (string[])(handler.ComponentModel.ExtendedProperties["ListenedBoundContexts"]);
                 var boundContext = (string)(handler.ComponentModel.ExtendedProperties["BoundContext"]);
-                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == boundContext);
+                var registration = findBoundedContext( boundContext);
                 if (registration == null)
-                    throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
+                        throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
                 registration.WithSaga(handler.ComponentModel.Services.First(), listenedBoundContexts);
 
             }
@@ -144,12 +144,21 @@ namespace Inceptum.Cqrs.Castle
             if (isProcess)
             {
                 var processFor = (string)(handler.ComponentModel.ExtendedProperties["ProcessFor"]);
-                var registration = m_BoundedContexts.FirstOrDefault(bc => bc.BoundedContextName == processFor);
+                var registration = findBoundedContext(processFor);
+                
                 if (registration == null)
                     throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", processFor));
                
                 registration.WithProcess(handler.ComponentModel.Services.First());
             }
+        }
+
+        private IBoundedContextRegistration findBoundedContext(string name)
+        {
+
+            return m_BoundedContexts.Where(r => r is IBoundedContextRegistration).Cast<IBoundedContextRegistration>()
+                .Concat(m_BoundedContexts.Where(r => r is IRegistrationWrapper<IBoundedContextRegistration>).Select(r => (r as IRegistrationWrapper<IBoundedContextRegistration>).Registration))
+                .FirstOrDefault(bc => bc.BoundedContextName == name);
         }
 
         public void Start()

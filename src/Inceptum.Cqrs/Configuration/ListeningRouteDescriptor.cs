@@ -3,17 +3,17 @@ using System.Collections.Generic;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public abstract class ListeningRouteDescriptor<T> : RouteDescriptorBase<T>, IListeningRouteDescriptor<T> where T :  RouteDescriptorBase
+    public abstract class ListeningRouteDescriptor<TDescriptor,TRegistration> : RouteDescriptorBase<TDescriptor,TRegistration>, IListeningRouteDescriptor<TDescriptor> where TDescriptor :  RouteDescriptorBase<TRegistration> where TRegistration : IRegistration
     {
-        protected T Descriptor { private get; set; }
+        protected TDescriptor Descriptor { private get; set; }
 
-        protected ListeningRouteDescriptor(BoundedContextRegistration registration) : base(registration)
+        protected ListeningRouteDescriptor(TRegistration registration) : base(registration)
         {
         }
 
         protected internal string Route { get; private set; }
 
-        T IListeningRouteDescriptor<T>.On(string route)
+        TDescriptor IListeningRouteDescriptor<TDescriptor>.On(string route)
         {
             Route = route;
             return Descriptor;

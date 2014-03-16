@@ -3,11 +3,13 @@ using System.Collections.Generic;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public class PublishingEventsDescriptor : PublishingRouteDescriptor<PublishingEventsDescriptor>
+    public class PublishingEventsDescriptor<TRegistration> : PublishingRouteDescriptor<PublishingEventsDescriptor<TRegistration>, TRegistration> 
+        where TRegistration : IRegistration
     {
         public Type[] Types { get; private set; }
 
-        public PublishingEventsDescriptor(BoundedContextRegistration registration, Type[] types) : base(registration)
+        public PublishingEventsDescriptor(TRegistration registration, Type[] types)
+            : base(registration)
         {
             Descriptor = this;
             Types = types;

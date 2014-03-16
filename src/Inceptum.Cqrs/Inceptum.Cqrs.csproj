@@ -114,7 +114,7 @@
     <Compile Include="BoundedContext.cs" />
     <Compile Include="Configuration\BoundedContextRegistration.cs" />
     <Compile Include="Configuration\BoundedContextRegistrationExtensions.cs" />
-    <Compile Include="Configuration\BoundedContextRegistrationWrapper.cs" />
+    <Compile Include="Configuration\RegistrationWrapper.cs" />
     <Compile Include="Configuration\ExplicitEndpointDescriptor.cs" />
     <Compile Include="Configuration\IBoundedContextRegistration.cs" />
     <Compile Include="Configuration\IHideObjectMembers.cs" />

@@ -3,18 +3,20 @@ using Inceptum.Cqrs.Routing;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public class ExplicitEndpointDescriptor<T>  where T : RouteDescriptorBase
+    public class ExplicitEndpointDescriptor<TDescriptor, TRegistration> 
+        where TDescriptor : RouteDescriptorBase<TRegistration> 
+        where TRegistration : IRegistration
     {
         private readonly string m_Endpoint;
-        private readonly T m_Descriptor;
+        private readonly TDescriptor m_Descriptor;
 
-        public ExplicitEndpointDescriptor(string endpoint, T descriptor)
+        public ExplicitEndpointDescriptor(string endpoint, TDescriptor descriptor)
         {
             m_Descriptor = descriptor;
             m_Endpoint = endpoint;
         }
 
-        public T For(Func<RoutingKey, bool> criteria)
+        public TDescriptor For(Func<RoutingKey, bool> criteria)
         {
             m_Descriptor.AddExplicitEndpoint(criteria, m_Endpoint);
             return m_Descriptor;

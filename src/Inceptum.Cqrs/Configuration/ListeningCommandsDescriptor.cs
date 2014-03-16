@@ -3,11 +3,13 @@ using System.Collections.Generic;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public class ListeningCommandsDescriptor : ListeningRouteDescriptor<ListeningCommandsDescriptor>
+    public class ListeningCommandsDescriptor<TRegistration> : ListeningRouteDescriptor<ListeningCommandsDescriptor<TRegistration>, TRegistration>
+        where TRegistration : IRegistration
     {
         public Type[] Types { get; private set; }
 
-        public ListeningCommandsDescriptor(BoundedContextRegistration registration, Type[] types) : base(registration)
+        public ListeningCommandsDescriptor(TRegistration registration, Type[] types)
+            : base(registration)
         {
             Types = types;
             Descriptor = this;
@@ -25,7 +27,7 @@ namespace Inceptum.Cqrs.Configuration
 
 
 
-        public ListeningCommandsDescriptor Prioritized(uint lowestPriority)
+        public ListeningCommandsDescriptor<TRegistration> Prioritized(uint lowestPriority)
         {
             LowestPriority = lowestPriority;
             return this;

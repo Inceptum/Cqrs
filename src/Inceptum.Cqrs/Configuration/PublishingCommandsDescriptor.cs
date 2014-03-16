@@ -3,17 +3,19 @@ using System.Collections.Generic;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public interface IPublishingCommandsDescriptor
+    public interface IPublishingCommandsDescriptor<TRegistration> where TRegistration : IRegistration
     {
-        IPublishingRouteDescriptor<PublishingCommandsDescriptor> To(string boundedContext);
+        IPublishingRouteDescriptor<PublishingCommandsDescriptor<TRegistration>> To(string boundedContext);
     }
 
-    public class PublishingCommandsDescriptor : PublishingRouteDescriptor<PublishingCommandsDescriptor>, IPublishingCommandsDescriptor
+    public class PublishingCommandsDescriptor<TRegistration>
+        : PublishingRouteDescriptor<PublishingCommandsDescriptor<TRegistration>, TRegistration>, IPublishingCommandsDescriptor<TRegistration> 
+        where TRegistration : IRegistration
     {
         private string m_BoundedContext;
         private readonly Type[] m_CommandsTypes;
 
-        public PublishingCommandsDescriptor(BoundedContextRegistration registration, Type[] commandsTypes):base(registration)
+        public PublishingCommandsDescriptor(TRegistration registration, Type[] commandsTypes):base(registration)
         {
             m_CommandsTypes = commandsTypes;
             Descriptor = this;
@@ -30,7 +32,7 @@ namespace Inceptum.Cqrs.Configuration
         }
 
 
-        public PublishingCommandsDescriptor Prioritized(uint lowestPriority)
+        public PublishingCommandsDescriptor<TRegistration> Prioritized(uint lowestPriority)
         {
             LowestPriority = lowestPriority;
             return this;
@@ -58,7 +60,7 @@ namespace Inceptum.Cqrs.Configuration
 
         }
 
-        IPublishingRouteDescriptor<PublishingCommandsDescriptor> IPublishingCommandsDescriptor.To(string boundedContext)
+        IPublishingRouteDescriptor<PublishingCommandsDescriptor<TRegistration>> IPublishingCommandsDescriptor<TRegistration>.To(string boundedContext)
         {
             m_BoundedContext = boundedContext;
             return this;

@@ -28,29 +28,29 @@ namespace Inceptum.Cqrs.Configuration
             return descriptor;
         }
 
-        public IPublishingCommandsDescriptor PublishingCommands(params Type[] commandsTypes)
+        public IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(params Type[] commandsTypes)
         {
-            return AddDescriptor(new PublishingCommandsDescriptor(this, commandsTypes));
+            return AddDescriptor(new PublishingCommandsDescriptor<IBoundedContextRegistration>(this, commandsTypes));
         }
 
-        public IListeningEventsDescriptor ListeningEvents(params Type[] types)
+        public IListeningEventsDescriptor<IBoundedContextRegistration> ListeningEvents(params Type[] types)
         {
-            return AddDescriptor(new ListeningEventsDescriptor(this, types));
+            return AddDescriptor(new ListeningEventsDescriptor<IBoundedContextRegistration>(this, types));
         }
 
-        public IListeningRouteDescriptor<ListeningCommandsDescriptor> ListeningCommands(params Type[] types)
+        public IListeningRouteDescriptor<ListeningCommandsDescriptor<IBoundedContextRegistration>> ListeningCommands(params Type[] types)
         {
-            return AddDescriptor(new ListeningCommandsDescriptor(this, types));
+            return AddDescriptor(new ListeningCommandsDescriptor<IBoundedContextRegistration>(this, types));
         }
 
-        public IPublishingRouteDescriptor<PublishingEventsDescriptor> PublishingEvents(params Type[] types)
+        public IPublishingRouteDescriptor<PublishingEventsDescriptor<IBoundedContextRegistration>> PublishingEvents(params Type[] types)
         {
-            return AddDescriptor(new PublishingEventsDescriptor(this, types));
+            return AddDescriptor(new PublishingEventsDescriptor<IBoundedContextRegistration>(this, types));
         }
 
-        public ProcessingOptionsDescriptor ProcessingOptions(string route)
+        public ProcessingOptionsDescriptor<IBoundedContextRegistration> ProcessingOptions(string route)
         {
-            return AddDescriptor(new ProcessingOptionsDescriptor(this, route));
+            return AddDescriptor(new ProcessingOptionsDescriptor<IBoundedContextRegistration>(this, route));
         }
 
 
