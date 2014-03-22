@@ -31,8 +31,8 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), rmqRoutingKey),
-                        Subscribe = string.Format("{0}.queue.{1}.{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), queueName)
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalContext, key.RouteType.ToString().ToLower(), rmqRoutingKey),
+                        Subscribe = string.Format("{0}.queue.{1}.{2}", key.LocalContext, key.RouteType.ToString().ToLower(), queueName)
                     },
                     SerializationFormat = m_SerializationFormat,
                     SharedDestination = true,
@@ -63,7 +63,7 @@ namespace Inceptum.Cqrs
                     Destination = new Destination
                     {
                         Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
-                        Subscribe =  string.Format("{0}.queue.{1}.{2}.{3}", key.LocalBoundedContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
+                        Subscribe =  string.Format("{0}.queue.{1}.{2}.{3}", key.LocalContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
                     },
                     SerializationFormat = m_SerializationFormat,
                     SharedDestination = true,
@@ -78,7 +78,7 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
                         Subscribe = null
                     },
                     SerializationFormat = m_SerializationFormat,

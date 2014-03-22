@@ -18,7 +18,7 @@ namespace Inceptum.Cqrs.Routing
         public CommunicationType CommunicationType { get; set; }
         public RouteType RouteType { get; set; }
         public uint Priority { get; set; }
-        public string LocalBoundedContext { get; set; }
+        public string LocalContext { get; set; }
         public string RemoteBoundedContext { get; set; }
 
         protected bool Equals(RoutingKey other)
@@ -28,7 +28,7 @@ namespace Inceptum.Cqrs.Routing
                    RouteType == other.RouteType &&
                    Priority == other.Priority &&
                    string.Equals(RemoteBoundedContext, other.RemoteBoundedContext) &&
-                   string.Equals(LocalBoundedContext, other.LocalBoundedContext) &&
+                   string.Equals(LocalContext, other.LocalContext) &&
                    m_Hints.Keys.Count == other.m_Hints.Keys.Count &&
                    m_Hints.Keys.All(k => other.m_Hints.ContainsKey(k) && Equals(m_Hints[k], other.m_Hints[k]));
         }
@@ -48,7 +48,7 @@ namespace Inceptum.Cqrs.Routing
                 if (StringComparer.InvariantCultureIgnoreCase.Compare(key, "RemoteBoundContext") == 0)
                     return RemoteBoundedContext;
                 if (StringComparer.InvariantCultureIgnoreCase.Compare(key, "LocalBoundedContext") == 0)
-                    return LocalBoundedContext;
+                    return LocalContext;
                 string value;
                 m_Hints.TryGetValue(key, out value);
                 return value;
@@ -81,7 +81,7 @@ namespace Inceptum.Cqrs.Routing
                 hashCode = (hashCode*397) ^ CommunicationType.GetHashCode();
                 hashCode = (hashCode * 397) ^ RouteType.GetHashCode();
                 hashCode = (hashCode*397) ^ (int) Priority;
-                hashCode = (hashCode * 397) ^ (LocalBoundedContext != null ? LocalBoundedContext.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (LocalContext != null ? LocalContext.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (RemoteBoundedContext != null ? RemoteBoundedContext.GetHashCode() : 0);
                 hashCode = m_Hints.Keys.OrderBy(k=>k).Aggregate(hashCode, (h, key) => (h * 397) ^ key.GetHashCode());
                 hashCode = m_Hints.Values.OrderBy(v => v).Aggregate(hashCode, (h, value) => (h * 397) ^ (value!=null?value.GetHashCode():0));
@@ -143,7 +143,7 @@ namespace Inceptum.Cqrs.Routing
                 throw new ConfigurationErrorsException(string.Format("Can not publish commands with events route '{0}'.",Name));
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_Context,
+                LocalContext = m_Context,
                 MessageType = command,
                 Priority = priority,
                 RouteType = Type.Value,
@@ -162,7 +162,7 @@ namespace Inceptum.Cqrs.Routing
 
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_Context,
+                LocalContext = m_Context,
                 MessageType = command,
                 Priority = priority,
                 RouteType = Type.Value,
@@ -182,7 +182,7 @@ namespace Inceptum.Cqrs.Routing
 
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_Context,
+                LocalContext = m_Context,
                 RouteType = Type.Value,
                 MessageType = @event,
                 Priority = priority,
@@ -200,7 +200,7 @@ namespace Inceptum.Cqrs.Routing
 
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_Context,
+                LocalContext = m_Context,
                 RouteType = Type.Value,
                 MessageType = @event,
                 RemoteBoundedContext = remoteBoundedContext,
