@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.Routing
 {
     public class ListeningCommandsDescriptor<TRegistration> : ListeningRouteDescriptor<ListeningCommandsDescriptor<TRegistration>, TRegistration>
         where TRegistration : IRegistration
     {
-        private MapEndpointResolver m_EndpointResolver;
         public Type[] Types { get; private set; }
 
         public ListeningCommandsDescriptor(TRegistration registration, Type[] types)
@@ -29,9 +28,9 @@ namespace Inceptum.Cqrs.Configuration
             return this;
         }
 
-        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public override void Create(IRouteMap routeMap, IDependencyResolver resolver)
         {
-            m_EndpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors);
+          
 
             foreach (var type in Types)
             {
@@ -39,20 +38,20 @@ namespace Inceptum.Cqrs.Configuration
                 {
                     for (uint priority = 1; priority <= LowestPriority; priority++)
                     {
-                        boundedContext.Routes[Route].AddSubscribedCommand(type, priority, m_EndpointResolver);
+                        routeMap[Route].AddSubscribedCommand(type, priority, EndpointResolver);
                     }
                 }
                 else
                 {
-                    boundedContext.Routes[Route].AddSubscribedCommand(type, 0, m_EndpointResolver);
+                    routeMap[Route].AddSubscribedCommand(type, 0, EndpointResolver);
                 }
             }
         }
 
 
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public override void Process(IRouteMap routeMap, CqrsEngine cqrsEngine)
         {
-            m_EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
+            EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
         }
     }
 }

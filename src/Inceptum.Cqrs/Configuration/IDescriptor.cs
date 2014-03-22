@@ -4,15 +4,17 @@ using System.ComponentModel;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public interface IBoundedContextDescriptor : IHideObjectMembers
+    public interface IDescriptor<in TSubject> : IHideObjectMembers
     {
         [EditorBrowsable(EditorBrowsableState.Never)]
         IEnumerable<Type> GetDependencies();
 
         [EditorBrowsable(EditorBrowsableState.Never)]
-        void Create(BoundedContext boundedContext, IDependencyResolver resolver);
+        void Create(TSubject subject, IDependencyResolver resolver);
 
         [EditorBrowsable(EditorBrowsableState.Never)]
-        void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine);
+        void Process(TSubject subject, CqrsEngine cqrsEngine);
+
     }
+
 }

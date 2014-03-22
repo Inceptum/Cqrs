@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
-    internal class LocalProcessDescriptor : DescriptorWithDependencies
+    internal class LocalProcessDescriptor : DescriptorWithDependencies<Context>
     {
         public LocalProcessDescriptor(object process)
             : base(process)
@@ -22,11 +22,11 @@ namespace Inceptum.Cqrs.Configuration
             }
         }
 
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public override void Process(Context context, CqrsEngine cqrsEngine)
         {
             foreach (var process in ResolvedDependencies)
             {
-                boundedContext.Processes.Add(((IProcess)process));
+                context.Processes.Add(((IProcess)process));
             }
         }
     }

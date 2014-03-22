@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Messaging;
 using Inceptum.Messaging.Configuration;
@@ -14,16 +15,15 @@ namespace Inceptum.Cqrs
     {
         public InMemoryCqrsEngine(params IRegistration[] registrations) :
             base(new MessagingEngine(new TransportResolver(new Dictionary<string, TransportInfo> { { "InMemory", new TransportInfo("none", "none", "none", null, "InMemory") } })),
-                new InMemoryEndpointResolver(), 
-                registrations
+                new  IRegistration[]{Register.DefaultEndpointResolver(new InMemoryEndpointResolver())}.Concat(registrations).ToArray()
             )
         {
              
         }
         public InMemoryCqrsEngine(IDependencyResolver dependencyResolver, params IRegistration[] registrations) :
             base(dependencyResolver, new MessagingEngine(new TransportResolver(new Dictionary<string, TransportInfo> { { "InMemory", new TransportInfo("none", "none", "none", null, "InMemory") } })),
-                       new InMemoryEndpointResolver(), new DefaultEndpointProvider(),
-                       registrations
+                      new DefaultEndpointProvider(),
+                      new  IRegistration[]{Register.DefaultEndpointResolver(new InMemoryEndpointResolver())}.Concat(registrations).ToArray()
                    )
         {
 

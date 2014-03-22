@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.Routing
 {
     public interface IPublishingCommandsDescriptor<TRegistration> where TRegistration : IRegistration
     {
@@ -14,7 +14,7 @@ namespace Inceptum.Cqrs.Configuration
     {
         private string m_BoundedContext;
         private readonly Type[] m_CommandsTypes;
-        private MapEndpointResolver m_EndpointResolver;
+       
 
         public PublishingCommandsDescriptor(TRegistration registration, Type[] commandsTypes):base(registration)
         {
@@ -39,30 +39,29 @@ namespace Inceptum.Cqrs.Configuration
             return this;
         }
 
-        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public override void Create(IRouteMap routeMap, IDependencyResolver resolver)
         {
-            m_EndpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors);
-            foreach (var type in m_CommandsTypes)
+                 foreach (var type in m_CommandsTypes)
             {
                 if (LowestPriority > 0)
                 {
                     for (uint priority = 1; priority <= LowestPriority; priority++)
                     {
-                        boundedContext.Routes[Route].AddPublishedCommand(type, priority, m_BoundedContext, m_EndpointResolver);
+                        routeMap[Route].AddPublishedCommand(type, priority, m_BoundedContext, EndpointResolver);
                     }
                 }
                 else
                 {
-                    boundedContext.Routes[Route].AddPublishedCommand(type, 0, m_BoundedContext, m_EndpointResolver);
+                    routeMap[Route].AddPublishedCommand(type, 0, m_BoundedContext, EndpointResolver);
 
                 }
             }
         }
 
 
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public override void Process(IRouteMap routeMap, CqrsEngine cqrsEngine)
         {
-            m_EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
+            EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
         }
     }
 }

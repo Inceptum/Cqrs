@@ -21,7 +21,7 @@ namespace Inceptum.Cqrs.Tests
 
     internal class CommandsHandler
     {
-        public readonly List<object> HandledCommands= new List<object>();
+        public readonly List<object> HandledCommands = new List<object>();
 
         public CommandsHandler()
         {
@@ -32,21 +32,21 @@ namespace Inceptum.Cqrs.Tests
         {
             Console.WriteLine("Command received:" + m);
             HandledCommands.Add(m);
-        } 
-        
+        }
+
         private CommandHandlingResult Handle(int m)
         {
             Console.WriteLine("Command received:" + m);
             HandledCommands.Add(m);
-            return new CommandHandlingResult{Retry = true,RetryDelay = 100};
-        }    
+            return new CommandHandlingResult { Retry = true, RetryDelay = 100 };
+        }
 
         private CommandHandlingResult Handle(RoutedCommand<DateTime> m)
         {
-            Console.WriteLine("Command received:" + m.Command+" Origination Endpoint:"+m.OriginEndpoint);
+            Console.WriteLine("Command received:" + m.Command + " Origination Endpoint:" + m.OriginEndpoint);
             HandledCommands.Add(m);
-            return new CommandHandlingResult{Retry = true,RetryDelay = 100};
-        }    
+            return new CommandHandlingResult { Retry = true, RetryDelay = 100 };
+        }
 
         private void Handle(long m)
         {
@@ -58,25 +58,25 @@ namespace Inceptum.Cqrs.Tests
 
     internal class EventListener
     {
-        public readonly List<Tuple<string, string>> EventsWithBoundedContext= new List<Tuple<string, string>>();
-        public readonly List<string> Events= new List<string>();
+        public readonly List<Tuple<string, string>> EventsWithBoundedContext = new List<Tuple<string, string>>();
+        public readonly List<string> Events = new List<string>();
 
-        void Handle(string m,string boundedContext)
+        void Handle(string m, string boundedContext)
         {
-            EventsWithBoundedContext.Add(Tuple.Create(m,boundedContext));
-            Console.WriteLine(boundedContext+":"+m);
-        } 
+            EventsWithBoundedContext.Add(Tuple.Create(m, boundedContext));
+            Console.WriteLine(boundedContext + ":" + m);
+        }
         void Handle(string m)
         {
             Events.Add(m);
             Console.WriteLine(m);
-        } 
+        }
     }
-    
+
 
     class CqrEngineDependentComponent
     {
-        public  static bool Started { get; set; }
+        public static bool Started { get; set; }
         public CqrEngineDependentComponent(ICqrsEngine engine)
         {
         }
@@ -89,7 +89,7 @@ namespace Inceptum.Cqrs.Tests
     [TestFixture]
     public class CqrsFacilityTests
     {
-      
+
 
         [Test]
         [ExpectedException(ExpectedMessage = "Component can not be projection and commands handler simultaneousely")]
@@ -97,7 +97,7 @@ namespace Inceptum.Cqrs.Tests
         {
             using (var container = new WindsorContainer())
             {
-                container.AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")));
+                container.AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(Register.BoundedContext("bc")));
                 container.Register(Component.For<CommandsHandler>().AsCommandsHandler("bc").AsProjection("bc", "remote"));
             }
         }
@@ -148,17 +148,17 @@ namespace Inceptum.Cqrs.Tests
             using (var container = new WindsorContainer())
             {
                 container.Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(
-                            BoundedContext.Named("local").ListeningEvents(typeof(string)).From("remote").On("remoteEVents")
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(
+                            Register.BoundedContext("local").ListeningEvents(typeof(string)).From("remote").On("remoteEVents")
                             ))
                     .Register(Component.For<EventListener>().AsProjection("local", "remote"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
 
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
                 var eventListener = container.Resolve<EventListener>();
-                cqrsEngine.BoundedContexts.First(c => c.Name == "local").EventDispatcher.Dispacth("remote","test",(delay, acknowledge) => {});
-                Assert.That(eventListener.EventsWithBoundedContext, Is.EquivalentTo(new[] {Tuple.Create("test", "remote")}), "Event was not dispatched");
-                Assert.That(eventListener.Events, Is.EquivalentTo(new[] {"test"}), "Event was not dispatched");
+                cqrsEngine.Contexts.First(c => c.Name == "local").EventDispatcher.Dispacth("remote", "test", (delay, acknowledge) => { });
+                Assert.That(eventListener.EventsWithBoundedContext, Is.EquivalentTo(new[] { Tuple.Create("test", "remote") }), "Event was not dispatched");
+                Assert.That(eventListener.Events, Is.EquivalentTo(new[] { "test" }), "Event was not dispatched");
             }
         }
 
@@ -169,20 +169,20 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(Register.BoundedContext("bc")))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc").LifestyleSingleton())
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
                 var commandsHandler = container.Resolve<CommandsHandler>();
-                cqrsEngine.BoundedContexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch("test",  (delay, acknowledge) => { }, new Endpoint(), "route");
+                cqrsEngine.Contexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch("test", (delay, acknowledge) => { }, new Endpoint(), "route");
                 Thread.Sleep(1300);
-                Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] {"test"}), "Command was not dispatched");
+                Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] { "test" }), "Command was not dispatched");
             }
         }
-        
+
 
         [Test]
-        [Ignore ("")]
+        [Ignore("")]
         public void DependencyOnICommandSenderTest()
         {
             using (var container = new WindsorContainer())
@@ -190,25 +190,25 @@ namespace Inceptum.Cqrs.Tests
                 var messagingEngine = MockRepository.GenerateMock<IMessagingEngine>();
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(messagingEngine))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(
-                            BoundedContext.Named("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback())
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(
+                            Register.BoundedContext("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback())
                             )
-                //    .Register(Component.For<EventListenerWithICommandSenderDependency>().AsSaga("bc", "remoteBc"))
+                    //    .Register(Component.For<EventListenerWithICommandSenderDependency>().AsSaga("bc", "remoteBc"))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
 
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
-                cqrsEngine.BoundedContexts.First(c => c.Name == "bc").EventDispatcher.Dispacth("remoteBc","some event", (delay, acknowledge) => { });
+                cqrsEngine.Contexts.First(c => c.Name == "bc").EventDispatcher.Dispacth("remoteBc", "some event", (delay, acknowledge) => { });
 
                 var listener = container.Resolve<EventListenerWithICommandSenderDependency>();
                 var commandsHandler = container.Resolve<CommandsHandler>();
-                Assert.That(listener.Sender,Is.Not.Null);
+                Assert.That(listener.Sender, Is.Not.Null);
                 listener.Sender.SendCommand("test", "bc");
                 Thread.Sleep(200);
                 Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] { "test" }), "Command was not dispatched");
             }
         }
-        
+
         [Test]
         public void CommandsHandlerWithResultWiringTest()
         {
@@ -216,7 +216,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(Register.BoundedContext("bc")))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
@@ -224,17 +224,17 @@ namespace Inceptum.Cqrs.Tests
 
                 bool acknowledged = false;
                 long retrydelay = 0;
-                cqrsEngine.BoundedContexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch(1, (delay, acknowledge) =>
+                cqrsEngine.Contexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch(1, (delay, acknowledge) =>
                 {
                     retrydelay = delay;
                     acknowledged = acknowledge;
                 }, new Endpoint(), "route");
                 Thread.Sleep(200);
-                Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] {1}), "Command was not dispatched");
-                Assert.That(retrydelay,Is.EqualTo(100));
-                Assert.That(acknowledged,Is.EqualTo(false));
+                Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] { 1 }), "Command was not dispatched");
+                Assert.That(retrydelay, Is.EqualTo(100));
+                Assert.That(acknowledged, Is.EqualTo(false));
             }
-        }          
+        }
 
 
         [Test]
@@ -244,7 +244,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc")))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(Register.BoundedContext("bc")))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
@@ -254,7 +254,7 @@ namespace Inceptum.Cqrs.Tests
                 long retrydelay = 0;
                 var endpoint = new Endpoint();
                 var command = DateTime.Now;
-                cqrsEngine.BoundedContexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch(command, (delay, acknowledge) =>
+                cqrsEngine.Contexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch(command, (delay, acknowledge) =>
                 {
                     retrydelay = delay;
                     acknowledged = acknowledge;
@@ -265,10 +265,10 @@ namespace Inceptum.Cqrs.Tests
                 Assert.That(((RoutedCommand<DateTime>)(commandsHandler.HandledCommands[0])).Command, Is.EqualTo(command), "Routed command was not dispatched with wrong command");
                 Assert.That(((RoutedCommand<DateTime>)(commandsHandler.HandledCommands[0])).OriginEndpoint, Is.EqualTo(endpoint), "Routed command was dispatched with wrong origin endpoint");
                 Assert.That(((RoutedCommand<DateTime>)(commandsHandler.HandledCommands[0])).OriginRoute, Is.EqualTo("route"), "Routed command was dispatched with wrong origin route");
-                Assert.That(retrydelay,Is.EqualTo(100));
-                Assert.That(acknowledged,Is.EqualTo(false));
+                Assert.That(retrydelay, Is.EqualTo(100));
+                Assert.That(acknowledged, Is.EqualTo(false));
             }
-        }        
+        }
         [Test]
         public void FailedCommandHandlerCausesRetryTest()
         {
@@ -276,7 +276,7 @@ namespace Inceptum.Cqrs.Tests
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(BoundedContext.Named("bc").FailedCommandRetryDelay(100)))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(Register.BoundedContext("bc").FailedCommandRetryDelay(100)))
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
@@ -284,14 +284,14 @@ namespace Inceptum.Cqrs.Tests
 
                 bool acknowledged = false;
                 long retrydelay = 0;
-                cqrsEngine.BoundedContexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch((long)1, (delay, acknowledge) =>
+                cqrsEngine.Contexts.First(c => c.Name == "bc").CommandDispatcher.Dispatch((long)1, (delay, acknowledge) =>
                 {
                     retrydelay = delay;
                     acknowledged = acknowledge;
                 }, new Endpoint(), "route");
                 Thread.Sleep(200);
-                Assert.That(retrydelay,Is.EqualTo(100));
-                Assert.That(acknowledged,Is.EqualTo(false));
+                Assert.That(retrydelay, Is.EqualTo(100));
+                Assert.That(acknowledged, Is.EqualTo(false));
             }
         }
 
@@ -301,32 +301,33 @@ namespace Inceptum.Cqrs.Tests
             using (var container = new WindsorContainer())
             {
                 container.Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()));
-                container.AddFacility<CqrsFacility>(f => f.RunInMemory().BoundedContexts(
-                    BoundedContext.Named("bc1")
-                        .PublishingEvents(typeof (int)).With("events1").WithLoopback()
+                container.AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(
+                    Register.BoundedContext("bc1")
+                        .PublishingEvents(typeof(int)).With("events1").WithLoopback()
                         .ListeningCommands(typeof(string)).On("commands1").WithLoopback()
                         .WithCommandsHandler<CommandHandler>(),
-                    BoundedContext.Named("bc2")
-                        .PublishingEvents(typeof (int)).With("events2").WithLoopback()
+                    Register.BoundedContext("bc2")
+                        .PublishingEvents(typeof(int)).With("events2").WithLoopback()
                         .ListeningCommands(typeof(string)).On("commands2").WithLoopback()
                         .WithCommandsHandler<CommandHandler>(),
-                    Saga<TestSaga>.Named("SomeIntegration")
+                    Register.Saga<TestSaga>("SomeIntegration")
                         .ListeningEvents(typeof(int)).From("bc1").On("events1")
                         .ListeningEvents(typeof(int)).From("bc2").On("events2")
-                        .PublishingCommands(typeof(string)).To("bc2").With("commands2")
-                        ));
+                        .PublishingCommands(typeof(string)).To("bc2").With("commands2"),
+                    Register.DefaultRouting.PublishingCommands(typeof(string)).To("bc2").With("commands2")
+                   ));
 
                 container.Register(
-                    Component.For<CommandHandler>() ,
-                    Component.For<TestSaga>() 
+                    Component.For<CommandHandler>(),
+                    Component.For<TestSaga>()
                     );
 
                 container.Resolve<ICqrsEngineBootstrapper>().Start();
 
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
-                cqrsEngine.SendCommand("cmd","bc1","bc1");
+                cqrsEngine.SendCommand("cmd", "bc1", "bc1");
 
-                Assert.That(TestSaga.Complete.WaitOne(1000),Is.True,"Saga has not got events or failed to send command");
+                Assert.That(TestSaga.Complete.WaitOne(1000), Is.True, "Saga has not got events or failed to send command");
             }
         }
 
@@ -336,13 +337,13 @@ namespace Inceptum.Cqrs.Tests
 
     public class TestSaga
     {
-        public static List<string> Messages=new List<string>();
-        public static ManualResetEvent Complete=new ManualResetEvent(false);
+        public static List<string> Messages = new List<string>();
+        public static ManualResetEvent Complete = new ManualResetEvent(false);
         private void Handle(int @event, ICommandSender sender, string boundedContext)
         {
             var message = string.Format("Event from {0} is caught by saga:{1}", boundedContext, @event);
             Messages.Add(message);
-            if(boundedContext=="bc1")
+            if (boundedContext == "bc1")
                 sender.SendCommand("cmd", "bc2");
             if (boundedContext == "bc2")
                 Complete.Set();
@@ -353,7 +354,7 @@ namespace Inceptum.Cqrs.Tests
 
     public class EventListenerWithICommandSenderDependency
     {
-        internal  ICommandSender Sender { get; set; }
+        internal ICommandSender Sender { get; set; }
 
         public EventListenerWithICommandSenderDependency()
         {
@@ -362,7 +363,7 @@ namespace Inceptum.Cqrs.Tests
         void Handle(string m, ICommandSender sender)
         {
             Sender = sender;
-        } 
+        }
     }
 
     public class FakeEndpointResolver : IEndpointResolver
@@ -374,12 +375,12 @@ namespace Inceptum.Cqrs.Tests
                 {"commandExchange", new Endpoint("test", "unistream.u1.commands", true, "json")},
                 {"commandQueue", new Endpoint("test", "unistream.u1.commands", true, "json")}
             };
-     
+
 
         public Endpoint Resolve(string route, RoutingKey key, IEndpointProvider endpointProvider)
         {
             return m_Endpoints[route];
         }
     }
- 
+
 }

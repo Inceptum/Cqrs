@@ -6,18 +6,18 @@ namespace Inceptum.Cqrs
     class EventsPublisher : IEventPublisher
     {
         private readonly CqrsEngine m_CqrsEngine;
-        private readonly BoundedContext m_BoundedContext;
+        private readonly Context m_Context;
 
-        public EventsPublisher(CqrsEngine cqrsEngine,BoundedContext boundedContext)
+        public EventsPublisher(CqrsEngine cqrsEngine,Context context)
         {
-            m_BoundedContext = boundedContext;
+            m_Context = context;
             m_CqrsEngine = cqrsEngine;
         }
 
         public void PublishEvent(object @event)
         {
             if (@event == null) throw new ArgumentNullException("event");
-            m_CqrsEngine.PublishEvent(@event, m_BoundedContext.Name);
+            m_CqrsEngine.PublishEvent(@event, m_Context.Name);
         }
  
     }

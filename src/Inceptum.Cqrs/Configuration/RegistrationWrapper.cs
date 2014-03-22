@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using EventStore.ClientAPI;
+using Inceptum.Cqrs.Configuration.BoundedContext;
+using Inceptum.Cqrs.Configuration.Routing;
+using Inceptum.Cqrs.Configuration.Saga;
 using NEventStore;
 using NEventStore.Dispatcher;
 
@@ -14,24 +17,13 @@ namespace Inceptum.Cqrs.Configuration
     public abstract class RegistrationWrapper<T> : IRegistrationWrapper<T>
         where T : IRegistration
     {
-        private T m_Registration;
+        private readonly T m_Registration;
         T IRegistrationWrapper<T>.Registration { get { return m_Registration; } }
 
         protected RegistrationWrapper(T registration)
         {
             m_Registration = registration;
         }
-   /*     public string BoundedContextName
-        {
-            get { return m_Registration.BoundedContextName; }
-        }
-
-        public long FailedCommandRetryDelayInternal
-        {
-            get { return m_Registration.FailedCommandRetryDelayInternal; }
-            set { m_Registration.FailedCommandRetryDelayInternal = value; }
-        }
-*/
 
         IEnumerable<Type> IRegistration.Dependencies
         {
@@ -51,10 +43,17 @@ namespace Inceptum.Cqrs.Configuration
 
     }
 
-
-
-    public static class SagaRegistrationWrapperExtensions
+    public static class RegistrationWrapperExtensions
     {
+        #region  Default Routing
+        public static IPublishingCommandsDescriptor<IDefaultRoutingRegistration> PublishingCommands(this IRegistrationWrapper<IDefaultRoutingRegistration> wrapper,
+            params Type[] commandsTypes)
+        {
+            return wrapper.Registration.PublishingCommands(commandsTypes);
+        }
+        #endregion
+
+        #region Saga
         public static IPublishingCommandsDescriptor<ISagaRegistration> PublishingCommands(this IRegistrationWrapper<ISagaRegistration> wrapper, params Type[] commandsTypes)
         {
             return wrapper.Registration.PublishingCommands(commandsTypes);
@@ -70,13 +69,10 @@ namespace Inceptum.Cqrs.Configuration
             return wrapper.Registration.ProcessingOptions(route);
         }
 
-    }
+        #endregion
 
-    public static class BoundedContextRegistrationWrapperExtensions
-    {
-
-
-        public static IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, params Type[] commandsTypes) 
+        #region BoundedContext
+        public static IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, params Type[] commandsTypes)
         {
             return wrapper.Registration.PublishingCommands(commandsTypes);
         }
@@ -161,6 +157,7 @@ namespace Inceptum.Cqrs.Configuration
             return wrapper.Registration.WithProcess<TProcess>();
         }
 
-       
+        #endregion
+
     }
 }

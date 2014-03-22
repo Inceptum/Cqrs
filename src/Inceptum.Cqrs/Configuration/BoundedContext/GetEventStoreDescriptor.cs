@@ -1,17 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using CommonDomain;
-using CommonDomain.Core;
 using CommonDomain.Persistence;
-using CommonDomain.Persistence.EventStore;
-using EventStore;
 using EventStore.ClientAPI;
-using NEventStore.Dispatcher;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
-    internal class GetEventStoreDescriptor : IBoundedContextDescriptor
+    internal class GetEventStoreDescriptor : IDescriptor<Context>
     {
         private readonly IEventStoreConnection m_EventStoreConnection;
 
@@ -25,15 +19,15 @@ namespace Inceptum.Cqrs.Configuration
             return new Type[0];
         }
 
-        public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public void Create(Cqrs.Context context, IDependencyResolver resolver)
         {
             var aggregateConstructor = resolver.HasService(typeof (IConstructAggregates))
                                            ? (IConstructAggregates) resolver.GetService(typeof (IConstructAggregates))
                                            : null;
-            boundedContext.EventStore = new GetEventStoreAdapter(m_EventStoreConnection, boundedContext.EventsPublisher, aggregateConstructor);
+            context.EventStore = new GetEventStoreAdapter(m_EventStoreConnection, context.EventsPublisher, aggregateConstructor);
         }
 
-        public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public void Process(Cqrs.Context context, CqrsEngine cqrsEngine)
         {
 
         }

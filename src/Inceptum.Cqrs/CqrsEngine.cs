@@ -5,11 +5,8 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Castle.Components.DictionaryAdapter.Xml;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
-using Inceptum.Cqrs.Routing;
-using Inceptum.Messaging;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using NLog;
@@ -54,16 +51,19 @@ namespace Inceptum.Cqrs
         readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
         private readonly IMessagingEngine m_MessagingEngine;
         private readonly CompositeDisposable m_Subscription=new CompositeDisposable();
-        internal  IEndpointResolver EndpointResolver { get; private set; }
+        internal  IEndpointResolver EndpointResolver { get; set; }
      
         private readonly IEndpointProvider m_EndpointProvider;
-        private readonly List<BoundedContext> m_BoundedContexts;
-        internal List<BoundedContext> BoundedContexts {
-            get { return m_BoundedContexts; }
+        private readonly List<Context> m_Contexts;
+        internal List<Context> Contexts
+        {
+            get { return m_Contexts; }
         }
+        public RouteMap DefaultRouteMap { get; private set; }
+
         private readonly IRegistration[] m_Registrations;
         private readonly IDependencyResolver m_DependencyResolver;
-        private readonly bool m_CreateMissingEndpoints = false;
+        private readonly bool m_CreateMissingEndpoints;
 
         protected IMessagingEngine MessagingEngine
         {
@@ -71,32 +71,33 @@ namespace Inceptum.Cqrs
         }
 
 
-        public CqrsEngine(IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, IEndpointProvider endpointProvider, params IRegistration[] registrations)
-            : this(new DefaultDependencyResolver(), messagingEngine,endpointResolver, endpointProvider, registrations)
+        public CqrsEngine(IMessagingEngine messagingEngine,  IEndpointProvider endpointProvider, params IRegistration[] registrations)
+            : this(new DefaultDependencyResolver(), messagingEngine, endpointProvider, registrations)
         {
         }
 
 
-        public CqrsEngine(IMessagingEngine messagingEngine, IEndpointResolver endpointResolver,params IRegistration[] registrations)
-            : this(new DefaultDependencyResolver(), messagingEngine, endpointResolver, new DefaultEndpointProvider(), registrations)
+        public CqrsEngine(IMessagingEngine messagingEngine, params IRegistration[] registrations)
+            : this(new DefaultDependencyResolver(), messagingEngine,   new DefaultEndpointProvider(), registrations)
         {
         }
 
-        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, IEndpointProvider endpointProvider, params IRegistration[] registrations)
-            : this(dependencyResolver, messagingEngine, endpointResolver, endpointProvider, false, registrations)
+        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointProvider endpointProvider, params IRegistration[] registrations)
+            : this(dependencyResolver, messagingEngine, endpointProvider, false, registrations)
         {
         }
 
-        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointResolver endpointResolver, IEndpointProvider endpointProvider, bool createMissingEndpoints, params IRegistration[] registrations)
+        public CqrsEngine(IDependencyResolver dependencyResolver, IMessagingEngine messagingEngine, IEndpointProvider endpointProvider, bool createMissingEndpoints, params IRegistration[] registrations)
         {
             m_Logger.Debug("CqrsEngine instanciating. createMissingEndpoints: "+ createMissingEndpoints);
             m_CreateMissingEndpoints = createMissingEndpoints;
             m_DependencyResolver = dependencyResolver;
             m_Registrations = registrations;
-            EndpointResolver =endpointResolver?? new DefaultEndpointResolver();
+            EndpointResolver = new DefaultEndpointResolver();
             m_MessagingEngine = messagingEngine;
             m_EndpointProvider = endpointProvider;
-            m_BoundedContexts=new List<BoundedContext>();
+            m_Contexts=new List<Context>();
+            DefaultRouteMap = new RouteMap("default");
             init();
             
         }
@@ -113,7 +114,7 @@ namespace Inceptum.Cqrs
                 registration.Process(this);
             }
 
-            foreach (var boundedContext in BoundedContexts)
+            foreach (var boundedContext in Contexts)
             {
                 boundedContext.Processes.ForEach(p => p.Start(boundedContext, boundedContext.EventsPublisher));
             }
@@ -121,12 +122,12 @@ namespace Inceptum.Cqrs
 
             ensureEndpoints();
 
-            foreach (var boundedContext in BoundedContexts)
+            foreach (var boundedContext in Contexts)
             {
                 foreach (var route in boundedContext.Routes)
                 {
                             
-                    BoundedContext context = boundedContext;
+                    Context context = boundedContext;
                     var subscriptions = route.MessageRoutes
                         .Where(r => r.Key.CommunicationType == CommunicationType.Subscribe)
                         .Select(r => new
@@ -191,21 +192,21 @@ namespace Inceptum.Cqrs
             var log = new StringBuilder();
             log.Append("Endpoints verification").AppendLine();
 
-            foreach (var boundedContext in BoundedContexts)
+            foreach (var context in new []{DefaultRouteMap}.Concat(Contexts))
             {
-                foreach (var route in boundedContext)
+                foreach (var route in context)
                 {
                     m_MessagingEngine.AddProcessingGroup(route.ProcessingGroupName,route.ProcessingGroup);
                 }
             }
 
 
-            foreach (var boundedContext in BoundedContexts)
+            foreach (var routeMap in (new[] { DefaultRouteMap }).Concat(Contexts))
             {
-                log.AppendFormat("Bounded context '{0}':",boundedContext.Name).AppendLine();
+                log.AppendFormat("Context '{0}':",routeMap.Name).AppendLine();
 
-                boundedContext.ResolveRoutes(m_EndpointProvider);
-                foreach (var route in boundedContext.Routes)
+                routeMap.ResolveRoutes(m_EndpointProvider);
+                foreach (var route in routeMap)
                 {
                     log.AppendFormat("\t{0} route '{1}':",route.Type, route.Name).AppendLine();
                     foreach (var messageRoute in route.MessageRoutes)
@@ -222,7 +223,7 @@ namespace Inceptum.Cqrs
                             {
                                 errorMessage.AppendFormat(
                                     "Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for publishing: {5}.",
-                                    boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
+                                    routeMap.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
                                 result = false;
                             }
 
@@ -235,7 +236,7 @@ namespace Inceptum.Cqrs
                             {
                                 errorMessage.AppendFormat(
                                     "Route '{1}' within bounded context '{0}' for {2} type '{3}' has resolved endpoint {4} that is not properly configured for subscription: {5}.",
-                                    boundedContext.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
+                                    routeMap.Name, route.Name, messageTypeName, routingKey.MessageType.Name, endpoint, error).AppendLine();
                                 result = false;
                             }
 
@@ -265,7 +266,7 @@ namespace Inceptum.Cqrs
         {
             if (disposing)
             {
-                foreach (var boundedContext in BoundedContexts.Where(b => b != null))
+                foreach (var boundedContext in Contexts.Where(b => b != null))
                 {
 
                     if (boundedContext.Processes != null)
@@ -293,32 +294,20 @@ namespace Inceptum.Cqrs
 
         private bool sendMessage(Type type, object message, RouteType routeType, string boundedContext, uint priority, string remoteBoundedContext=null)
         {
-            var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
+            var context = Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
             if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found", boundedContext), "boundedContext");
-            var publishDirections = (from route in context.Routes
-                                     from messageRoute in route.MessageRoutes
-                                     where messageRoute.Key.MessageType == type && 
-                                           messageRoute.Key.RouteType == routeType && 
-                                           messageRoute.Key.Priority == priority &&
-                                           messageRoute.Key.RemoteBoundedContext==remoteBoundedContext
-                                     select new
-                                     {
-                                         processingGroup = route.ProcessingGroupName,
-                                         endpoint = messageRoute.Value
-                                     }).ToArray();
-            if (!publishDirections.Any())
-                return false;
-            foreach (var direction in publishDirections)
+            var published = context.PublishMessage(m_MessagingEngine,type,message, routeType, priority, remoteBoundedContext);
+            if (!published && routeType == RouteType.Commands)
             {
-                m_MessagingEngine.Send(message, direction.endpoint, direction.processingGroup);
+                published = DefaultRouteMap.PublishMessage(m_MessagingEngine,type,message, routeType, priority, remoteBoundedContext);
             }
-            return true;
+            return published;
         }
 
         public void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types)
         {
-            var context = BoundedContexts.FirstOrDefault(bc => bc.Name == boundedContext);
+            var context = Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
                 if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found",boundedContext),"boundedContext");
             var publishDirections = (from route in context.Routes
@@ -351,7 +340,6 @@ namespace Inceptum.Cqrs
                                        select  messageRoute.Key.MessageType).ToArray();
                 
                 
-               // var knownEventTypes = context.EventsSubscriptions.SelectMany(e => e.Value).ToArray();
                 m_Subscription.Add(m_MessagingEngine.Subscribe(
                     replayEndpoint,
                     (@event, acknowledge) => context.EventDispatcher.Dispacth(remoteBoundedContext,@event, acknowledge),
@@ -360,7 +348,7 @@ namespace Inceptum.Cqrs
                     0,
                     knownEventTypes));
             }
-            SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = DateTime.MinValue, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext,remoteBoundedContext,0);
+            SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = DateTime.MinValue, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext,remoteBoundedContext);
         }
 
 

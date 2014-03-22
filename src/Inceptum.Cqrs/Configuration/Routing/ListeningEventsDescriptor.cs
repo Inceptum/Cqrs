@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.Routing
 {
     public interface IListeningEventsDescriptor<TRegistration> where TRegistration : IRegistration
     {
@@ -14,8 +14,7 @@ namespace Inceptum.Cqrs.Configuration
     {
         private string m_BoundedContext;
         private readonly Type[] m_Types;
-        private MapEndpointResolver m_EndpointResolver;
-
+    
         public ListeningEventsDescriptor(TRegistration registration, Type[] types)
             : base(registration)
         {
@@ -34,18 +33,18 @@ namespace Inceptum.Cqrs.Configuration
             return new Type[0];
         }
 
-        public override void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public override void Create(IRouteMap routeMap, IDependencyResolver resolver)
         {
-            m_EndpointResolver = new MapEndpointResolver(ExplicitEndpointSelectors);
+    
             foreach (var type in m_Types)
             {
-                boundedContext.Routes[Route].AddSubscribedEvent(type, 0, m_BoundedContext, m_EndpointResolver);
+                routeMap[Route].AddSubscribedEvent(type, 0, m_BoundedContext, EndpointResolver);
             }
         }
 
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public override void Process(IRouteMap routeMap, CqrsEngine cqrsEngine)
         {
-            m_EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
+            EndpointResolver.SetFallbackResolver(cqrsEngine.EndpointResolver);
         }
 
     }

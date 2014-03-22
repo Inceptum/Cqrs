@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    abstract class DescriptorWithDependencies : IBoundedContextDescriptor
+    abstract class DescriptorWithDependencies<TSubject> : IDescriptor<TSubject>
     {
         private readonly Type[] m_Dependedncies = new Type[0];
         private readonly Func<Func<Type, object>, IEnumerable<object>> m_ResolveDependedncies;
@@ -26,21 +26,21 @@ namespace Inceptum.Cqrs.Configuration
             return m_Dependedncies;
         }
 
-        public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public void Create(TSubject subject, IDependencyResolver resolver)
         {
            
             ResolvedDependencies = m_ResolveDependedncies(resolver.GetService);
-            Create(boundedContext);
+            Create(subject);
         }
 
         protected IEnumerable<object> ResolvedDependencies { get; private set; }
 
-        protected virtual void Create(BoundedContext boundedContext)
+        protected virtual void Create(TSubject subject)
         {
             
         }
 
-        public virtual void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public virtual void Process(TSubject subject, CqrsEngine cqrsEngine)
         {
             
         }

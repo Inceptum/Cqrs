@@ -1,9 +1,9 @@
 ﻿using System;
 using CommonDomain.Persistence;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
-    class CommandsHandlerDescriptor : DescriptorWithDependencies
+    class CommandsHandlerDescriptor : DescriptorWithDependencies<Context>
     {
         public CommandsHandlerDescriptor(params object[] handlers):base(handlers)
         {
@@ -14,13 +14,13 @@ namespace Inceptum.Cqrs.Configuration
 
         }
         
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public override void Process(Context context, CqrsEngine cqrsEngine)
         {
             foreach (var handler in ResolvedDependencies)
             {
-                IRepository repository = boundedContext.EventStore==null?null:boundedContext.EventStore.Repository;
-                boundedContext.CommandDispatcher.Wire(handler,
-                                                      new OptionalParameter<IEventPublisher>(boundedContext.EventsPublisher),
+                IRepository repository = context.EventStore==null?null:context.EventStore.Repository;
+                context.CommandDispatcher.Wire(handler,
+                                                      new OptionalParameter<IEventPublisher>(context.EventsPublisher),
                                                       new OptionalParameter<IRepository>(repository) 
                     );
             }

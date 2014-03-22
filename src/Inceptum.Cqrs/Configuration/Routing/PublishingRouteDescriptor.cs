@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.Routing
 {
     public abstract class PublishingRouteDescriptor<TDescriptor, TRegistration> : RouteDescriptorBase<TDescriptor, TRegistration>, IPublishingRouteDescriptor<TDescriptor>
         where TDescriptor : RouteDescriptorBase <TRegistration>
@@ -22,8 +22,8 @@ namespace Inceptum.Cqrs.Configuration
         }
 
         public abstract IEnumerable<Type> GetDependencies();
-        public abstract void Create(BoundedContext boundedContext, IDependencyResolver resolver);
-        public abstract void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine);
+        public abstract void Create(IRouteMap routeMap, IDependencyResolver resolver);
+        public abstract void Process(IRouteMap routeMap, CqrsEngine cqrsEngine);
 
     }
 }

@@ -8,6 +8,7 @@ using Castle.MicroKernel.Context;
 using Castle.MicroKernel.Facilities;
 using Castle.MicroKernel.Registration;
 using Inceptum.Cqrs.Configuration;
+using Inceptum.Cqrs.Configuration.BoundedContext;
 using IRegistration = Inceptum.Cqrs.Configuration.IRegistration;
 
 namespace Inceptum.Cqrs.Castle
@@ -52,7 +53,7 @@ namespace Inceptum.Cqrs.Castle
             return this;
         }
 
-        public CqrsFacility BoundedContexts(params IRegistration[] boundedContexts)
+        public CqrsFacility Contexts(params IRegistration[] boundedContexts)
         {
             m_BoundedContexts = boundedContexts;
             return this;
@@ -158,7 +159,7 @@ namespace Inceptum.Cqrs.Castle
             Kernel.Register(Component.For<IDependencyResolver>().ImplementedBy<CastleDependencyResolver>());
             Kernel.Register(engineReg.Named(m_EngineComponetName).DependsOn(new
                 {
-                    registrations = m_BoundedContexts.Cast<IRegistration>().ToArray()
+                    registrations = m_BoundedContexts.ToArray()
                 }));
             /*
               Kernel.Register(

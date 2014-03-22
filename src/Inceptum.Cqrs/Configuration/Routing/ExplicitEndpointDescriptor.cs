@@ -1,7 +1,7 @@
 using System;
 using Inceptum.Cqrs.Routing;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.Routing
 {
     public class ExplicitEndpointDescriptor<TDescriptor, TRegistration> 
         where TDescriptor : RouteDescriptorBase<TRegistration> 

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.Routing
 {
-    public class ProcessingOptionsDescriptor<TRegistrtaion> : RegistrationWrapper<TRegistrtaion>, IBoundedContextDescriptor where TRegistrtaion : IRegistration
+    public class ProcessingOptionsDescriptor<TRegistrtaion> : RegistrationWrapper<TRegistrtaion>, IDescriptor<IRouteMap> where TRegistrtaion : IRegistration
     {
         private readonly string m_Route;
         private uint m_ThreadCount;
@@ -19,14 +19,14 @@ namespace Inceptum.Cqrs.Configuration
             return new Type[0];
         }
 
-        public void Create(BoundedContext boundedContext, IDependencyResolver resolver)
+        public void Create(IRouteMap routeMap, IDependencyResolver resolver)
         {
-            boundedContext.Routes[m_Route].ProcessingGroup.ConcurrencyLevel = m_ThreadCount;
+            routeMap[m_Route].ProcessingGroup.ConcurrencyLevel = m_ThreadCount;
             if(m_QueueCapacity!=null)
-                boundedContext.Routes[m_Route].ProcessingGroup.QueueCapacity = m_QueueCapacity.Value;
+                routeMap[m_Route].ProcessingGroup.QueueCapacity = m_QueueCapacity.Value;
         }
 
-        public void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public void Process(IRouteMap routeMap, CqrsEngine cqrsEngine)
         {
         }
 

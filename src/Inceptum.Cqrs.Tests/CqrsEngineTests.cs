@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Reactive.Disposables;
 using System.Threading;
-using Castle.Core.Logging;
 using CommonDomain;
 using CommonDomain.Core;
 using CommonDomain.Persistence;
@@ -19,7 +16,6 @@ using Inceptum.Messaging;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.RabbitMq;
-using Inceptum.Messaging.Serialization;
 using NEventStore;
 using NEventStore.Logging;
 using NUnit.Framework;
@@ -181,11 +177,11 @@ namespace Inceptum.Cqrs.Tests
             {
                 var commandHandler = new CommandHandler();
                 using (var engine = new CqrsEngine(messagingEngine,
-                                                   new InMemoryEndpointResolver(),
-                                                   BoundedContext.Named("bc")
-                                                                      .PublishingEvents(typeof (int)).With("eventExchange").WithLoopback("eventQueue")
-                                                                      .ListeningCommands(typeof (string)).On("exchange1").WithLoopback("commandQueue")
-                                                                      .ListeningCommands(typeof (string)).On("exchange2").WithLoopback("commandQueue")
+                                                   Register.DefaultEndpointResolver(new InMemoryEndpointResolver()),
+                                                   Register.BoundedContext("bc")
+                                                                      .PublishingEvents(typeof (int)).With("eventExchange") 
+                                                                      .ListeningCommands(typeof (string)).On("exchange1") 
+                                                                      .ListeningCommands(typeof (string)).On("exchange2") 
                                                                       .WithCommandsHandler(commandHandler))
                     )
                 {
@@ -194,6 +190,45 @@ namespace Inceptum.Cqrs.Tests
                     messagingEngine.Send("test3", new Endpoint("InMemory", "exchange3", serializationFormat: "json"));
                     Thread.Sleep(2000);
                     Assert.That(commandHandler.AcceptedCommands, Is.EquivalentTo(new[] { "test1", "test2" }));
+                }
+            }
+        }  
+
+        [Test]
+        public void ContextUsesDefaultRouteForCommandPublishingIfItDoesNotHaveItsOwnTest()
+        {
+            var bcCommands = new Endpoint("InMemory", "bcCommands",serializationFormat:"json");
+            var defaultCommands = new Endpoint("InMemory", "defaultCommands", serializationFormat: "json");
+            using (
+                var messagingEngine =
+                    new MessagingEngine(
+                        new TransportResolver(new Dictionary<string, TransportInfo>
+                            {
+                                {"InMemory", new TransportInfo("none", "none", "none", null, "InMemory")}
+                            })))
+            {
+                using (var engine = new CqrsEngine(messagingEngine,
+                                                                      Register.DefaultEndpointResolver(new InMemoryEndpointResolver()),
+                                                                      Register.BoundedContext("bc2")
+                                                                        .PublishingCommands(typeof(int)).To("bc1").With("bcCommands"),
+                                                                      Register.DefaultRouting
+                                                                        .PublishingCommands(typeof(string)).To("bc1").With("defaultCommands")
+                                                                        .PublishingCommands(typeof(int)).To("bc1").With("defaultCommands")
+                                                                      )
+                    )
+                {
+                    var received=new AutoResetEvent(false);
+                    using (messagingEngine.Subscribe(defaultCommands, o => received.Set(), s => { }, typeof(string)))
+                    {
+                        engine.SendCommand("test", "bc2", "bc1");
+                        Assert.That(received.WaitOne(1000), Is.True, "not defined for context command was not routed with default route map");
+                    }
+
+                    using (messagingEngine.Subscribe(bcCommands, o => received.Set(),s => {},typeof(int)))
+                    {
+                        engine.SendCommand(1, "bc2", "bc1");
+                        Assert.That(received.WaitOne(1000), Is.True, "defined for context command was not routed with context route map");
+                    }
                 }
             }
         }
@@ -211,16 +246,16 @@ namespace Inceptum.Cqrs.Tests
             {
                 var commandHandler = new CommandHandler();
                 using (var engine = new CqrsEngine(messagingEngine,
-                                                   new InMemoryEndpointResolver(),
-                                                   BoundedContext.Named("bc1")
+                                                   Register.DefaultEndpointResolver(new InMemoryEndpointResolver()),
+                                                   Register.BoundedContext("bc1")
                                                         .PublishingEvents(typeof (int)).With("events1").WithLoopback()
                                                         .ListeningCommands(typeof(string)).On("commands1").WithLoopback()
                                                         .WithCommandsHandler<CommandHandler>(),
-                                                   BoundedContext.Named("bc2")
+                                                   Register.BoundedContext("bc2")
                                                         .PublishingEvents(typeof (int)).With("events2").WithLoopback()
                                                         .ListeningCommands(typeof(string)).On("commands2").WithLoopback()
                                                         .WithCommandsHandler<CommandHandler>(),
-                                                   Saga<TestSaga>.Named("SomeIntegration")
+                                                   Register.Saga<TestSaga>("SomeIntegration")
                                                         .ListeningEvents(typeof(int)).From("bc1").On("events1")
                                                         .ListeningEvents(typeof(int)).From("bc2").On("events2")
                                                         .PublishingCommands(typeof(string)).To("bc2").With("commands2")
@@ -250,14 +285,15 @@ namespace Inceptum.Cqrs.Tests
                 new MessagingEngine(
                     new TransportResolver(new Dictionary<string, TransportInfo>
                     {
-                        {"InMemory", new TransportInfo("none", "none", "none", null, "InMemory")}
+                        {"InMemory", new TransportInfo("none", "none", "none", null, "InMemory")},
+                        {"rmq", new TransportInfo("none", "none", "none", null, "InMemory")}
                     }));
             using (messagingEngine)
             {
                 
             
-            new CqrsEngine(messagingEngine,new InMemoryEndpointResolver(),endpointProvider,
-                BoundedContext.Named("bc")
+            new CqrsEngine(messagingEngine,endpointProvider,
+                Register.BoundedContext("bc")
                     .PublishingCommands(typeof(string)).To("operations").With("operationsCommandsRoute")
                     .ListeningEvents(typeof(int)).From("operations").On("operationEventsRoute")
                     .ListeningCommands(typeof(string)).On("commandsRoute")
@@ -279,8 +315,16 @@ namespace Inceptum.Cqrs.Tests
                     //resolver based prioritization 
                     .ListeningCommands(typeof(string)).On("prioritizedCommandsRoute")
                         .Prioritized(lowestPriority: 2)
+                        .WithEndpointResolver(new InMemoryEndpointResolver())
                     .ProcessingOptions("explicitlyPrioritizedCommandsRoute").MultiThreaded(10)
-                    .ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10).QueueCapacity(1024)
+                    .ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10).QueueCapacity(1024),
+                Register.Saga<TestSaga>("saga")
+                    .PublishingCommands(typeof(string)).To("operations").With("operationsCommandsRoute")
+                    .ListeningEvents(typeof(int)).From("operations").On("operationEventsRoute"),
+                Register.DefaultRouting
+                    .PublishingCommands(typeof(string)).To("operations").With("defaultCommandsRoute")
+                    .PublishingCommands(typeof(int)).To("operations").With("defaultCommandsRoute"),
+                Register.DefaultEndpointResolver(new RabbitMqConventionEndpointResolver("rmq", "json"))
                );
             }
         }
@@ -301,9 +345,9 @@ namespace Inceptum.Cqrs.Tests
                             })))
             {
                 var commandHandler = new CommandHandler(100);
-                using (var engine = new CqrsEngine(messagingEngine,
-                                                   new InMemoryEndpointResolver(),endpointProvider,
-                                                   BoundedContext.Named("bc")
+                using (var engine = new CqrsEngine(messagingEngine,endpointProvider,
+                                                   Register.DefaultEndpointResolver(new InMemoryEndpointResolver()),
+                                                   Register.BoundedContext("bc")
                                                     .PublishingEvents(typeof (int)).With("eventExchange").WithLoopback("eventQueue")
                                                     .ListeningCommands(typeof(string)).On("commandsRoute")
                                                         .Prioritized(lowestPriority: 1)
@@ -338,17 +382,16 @@ namespace Inceptum.Cqrs.Tests
             endpointProvider.Expect(p => p.Contains(null)).IgnoreArguments().Return(false);
          
             var messagingEngine = MockRepository.GenerateStrictMock<IMessagingEngine>();
-
-
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.localEvents"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.remoteEvents"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.localCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.remoteCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.SomeIntegration.sagaEvents"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.SomeIntegration.sagaCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
+            messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.default.defaultCommands"), Arg<ProcessingGroupInfo>.Is.Anything));
             messagingEngine.Expect(e => e.AddProcessingGroup(Arg<string>.Is.Equal("cqrs.operations.prioritizedCommands"), Arg<ProcessingGroupInfo>.Matches(info => info.ConcurrencyLevel==2)));
             string error;
-            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(17);
+            messagingEngine.Expect(e => e.VerifyEndpoint(new Endpoint(), EndpointUsage.None, false, out error)).IgnoreArguments().Return(true).Repeat.Times(18);
             //subscription for remote events
             messagingEngine.Expect(e => e.Subscribe(
                 Arg<Endpoint>.Is.Anything,
@@ -418,21 +461,23 @@ namespace Inceptum.Cqrs.Tests
 
 
             using (var ce=new CqrsEngine(messagingEngine,
-                    new RabbitMqConventionEndpointResolver("tr1", "protobuf", endpointProvider),
-                    BoundedContext.Named("operations")
+                    Register.DefaultEndpointResolver(new RabbitMqConventionEndpointResolver("tr1", "protobuf")),
+                    Register.BoundedContext("operations")
                         .PublishingEvents(typeof (bool) ).With("localEvents").WithLoopback()
                         .ListeningCommands(typeof(string), typeof(DateTime)).On("localCommands").WithLoopback()
                         .ListeningCommands(typeof(byte)).On("prioritizedCommands").Prioritized(2)
                         .ListeningEvents(typeof(int), typeof(long)).From("integration").On("remoteEvents")
                         .PublishingCommands(typeof(string)).To("integration").With("remoteCommands").Prioritized(5)
                         .ProcessingOptions("prioritizedCommands").MultiThreaded(2),
-                    Saga<TestSaga>.Named("SomeIntegration")
+                   Register.Saga<TestSaga>("SomeIntegration")
                         .ListeningEvents(typeof(int)).From("bc1").On("sagaEvents")
                         .PublishingCommands(typeof(string)).To("bc2").With("sagaCommands")
                        // .ProcessingOptions("commands").MultiThreaded(5)
+                       ,
+                       Register.DefaultRouting.PublishingCommands(typeof(string)).To("bc3").With("defaultCommands")
                     ))
                 {
-                    ce.BoundedContexts.Find(bc=>bc.Name=="operations").EventsPublisher.PublishEvent(true);
+                    ce.Contexts.Find(bc=>bc.Name=="operations").EventsPublisher.PublishEvent(true);
                     ce.SendCommand("testCommand", "operations", "integration",1);
                 }
 
@@ -453,7 +498,7 @@ namespace Inceptum.Cqrs.Tests
                                                                    new IPEndPoint(IPAddress.Loopback, 1113));
             eventStoreConnection.Connect();
             using (var engine = new InMemoryCqrsEngine(
-                BoundedContext.Named("local")
+                BoundedConfiguration.Context.BoundedContext("local")
                                    .PublishingEvents(typeof (int), typeof (TestAggregateRootNameChangedEvent),
                                                      typeof (TestAggregateRootCreatedEvent))
                                    .To("events")
@@ -538,7 +583,7 @@ namespace Inceptum.Cqrs.Tests
 
             var log = MockRepository.GenerateMock<ILog>();
             var eventsListener = new EventsListener();
-            var localBoundedContext = BoundedContext.Named("local")
+            var localBoundedContext = Register.BoundedContext("local")
                                     .PublishingEvents(typeof (TestAggregateRootNameChangedEvent), typeof (TestAggregateRootCreatedEvent)).With("events").WithLoopback()
                                     .ListeningCommands(typeof (string)).On("commands1").WithLoopback()
                                     .WithCommandsHandler<EsCommandHandler>();
@@ -561,7 +606,7 @@ namespace Inceptum.Cqrs.Tests
 
             using (var engine = new InMemoryCqrsEngine(localBoundedContext,
 
-                BoundedContext.Named("projections")
+                Register.BoundedContext("projections")
                             .ListeningEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).From("local").On("events")
                             .WithProjection(eventsListener, "local")))
             {
@@ -592,7 +637,7 @@ namespace Inceptum.Cqrs.Tests
 
 
             var eventsListener = new EventsListener();
-            var localBoundedContext = BoundedContext.Named("local")
+            var localBoundedContext = Register.BoundedContext("local")
                 .PublishingEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).With("events").WithLoopback()
                 .ListeningCommands(typeof(string)).On("commands").WithLoopback()
                 .ListeningInfrastructureCommands().On("commands").WithLoopback()
@@ -607,8 +652,9 @@ namespace Inceptum.Cqrs.Tests
             using (messagingEngine)
             {
                 using (
-                    var engine = new CqrsEngine(messagingEngine, endpointResolver, localBoundedContext,
-                        BoundedContext.Named("projections").WithProjection(eventsListener, "local")))
+                    var engine = new CqrsEngine(messagingEngine,  localBoundedContext,
+                        Register.DefaultEndpointResolver(endpointResolver),
+                        Register.BoundedContext("projections").WithProjection(eventsListener, "local")))
                 {
                     var guid=Guid.NewGuid();
                     engine.SendCommand(guid + ":create", "local", "local");
@@ -634,7 +680,7 @@ namespace Inceptum.Cqrs.Tests
         {
             var log = MockRepository.GenerateMock<ILog>();
             var eventsListener = new EventsListener();
-            var localBoundedContext = BoundedContext.Named("local")
+            var localBoundedContext = Register.BoundedContext("local")
                 .PublishingEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).With("events").WithLoopback()
                 .ListeningCommands(typeof(string)).On("commands").WithLoopback()
                 .ListeningInfrastructureCommands().On("commands").WithLoopback()
@@ -649,7 +695,7 @@ namespace Inceptum.Cqrs.Tests
 
                 using (
                     var engine = new InMemoryCqrsEngine(localBoundedContext,
-                        BoundedContext.Named("projections")
+                        Register.BoundedContext("projections")
                         .ListeningEvents(typeof(TestAggregateRootNameChangedEvent), typeof(TestAggregateRootCreatedEvent)).From("local").On("events")
                             .WithProjection(eventsListener, "local")
                             .PublishingInfrastructureCommands().To("local").With("commands")))

@@ -1,4 +1,6 @@
-﻿using Inceptum.Cqrs.InfrastructureCommands;
+﻿using Inceptum.Cqrs.Configuration.BoundedContext;
+using Inceptum.Cqrs.Configuration.Routing;
+using Inceptum.Cqrs.InfrastructureCommands;
 
 namespace Inceptum.Cqrs.Configuration
 {

@@ -9,14 +9,12 @@ namespace Inceptum.Cqrs
     public class RabbitMqConventionEndpointResolver : IEndpointResolver
     {
         readonly Dictionary<Tuple<string, RoutingKey>, Endpoint> m_Cache = new Dictionary<Tuple<string, RoutingKey>, Endpoint>();
-        private readonly IEndpointProvider m_EndpointProvider;
         private readonly string m_Transport;
         private string m_SerializationFormat;
 
-        public RabbitMqConventionEndpointResolver(string transport,string serializationFormat,IEndpointProvider endpointProvider)
+        public RabbitMqConventionEndpointResolver(string transport,string serializationFormat)
         {
             m_Transport = transport;
-            m_EndpointProvider = endpointProvider;
             m_SerializationFormat = serializationFormat;
         }
 
@@ -99,9 +97,9 @@ namespace Inceptum.Cqrs
                 Endpoint ep;
                 if (m_Cache.TryGetValue(Tuple.Create(route,key), out ep)) return ep;
 
-                if (m_EndpointProvider.Contains(route))
+                if (endpointProvider.Contains(route))
                 {
-                    ep = m_EndpointProvider.Get(route);
+                    ep = endpointProvider.Get(route);
                     m_Cache.Add(Tuple.Create(route, key), ep);
                     return ep;
                 }

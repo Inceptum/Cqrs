@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Configuration;
-using System.Linq;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
-    internal class ProjectionDescriptor : DescriptorWithDependencies
+    internal class ProjectionDescriptor : DescriptorWithDependencies<Context>
     {
         private readonly string m_FromBoundContext;
 
@@ -17,12 +15,12 @@ namespace Inceptum.Cqrs.Configuration
             m_FromBoundContext = fromBoundContext;
         }
 
-        public override void Process(BoundedContext boundedContext, CqrsEngine cqrsEngine)
+        public override void Process(Context context, CqrsEngine cqrsEngine)
         {
             foreach (var projection in ResolvedDependencies)
             {
                 //TODO: pass bounded context ReadModel
-                boundedContext.EventDispatcher.Wire(m_FromBoundContext, projection);
+                context.EventDispatcher.Wire(m_FromBoundContext, projection);
             }
         }
     }

@@ -24,11 +24,11 @@ namespace Inceptum.Cqrs.InfrastructureCommands
     internal class InfrastructureCommandsHandler
     {
         private readonly CqrsEngine m_CqrsEngine;
-        private readonly BoundedContext m_BoundedContext;
+        private readonly Context m_Context;
 
-        public InfrastructureCommandsHandler(CqrsEngine cqrsEngine, BoundedContext boundedContext)
+        public InfrastructureCommandsHandler(CqrsEngine cqrsEngine, Context context)
         {
-            m_BoundedContext = boundedContext;
+            m_Context = context;
             m_CqrsEngine = cqrsEngine;
         }
 
@@ -39,8 +39,8 @@ namespace Inceptum.Cqrs.InfrastructureCommands
                 serialization = routedCommand.OriginEndpoint.SerializationFormat;
             var endpoint = new Endpoint(routedCommand.OriginEndpoint.TransportId, routedCommand.Command.Destination, true, serialization);
 
-            var eventsFrom = m_BoundedContext.EventStore.GetEventsFrom(routedCommand.Command.From,routedCommand.Command.Types);
-            var processingGroupName = m_BoundedContext.First(r=>r.Name==routedCommand.OriginRoute).ProcessingGroupName;
+            var eventsFrom = m_Context.EventStore.GetEventsFrom(routedCommand.Command.From,routedCommand.Command.Types);
+            var processingGroupName = m_Context.First(r=>r.Name==routedCommand.OriginRoute).ProcessingGroupName;
             foreach (var @event in eventsFrom)
             {
                 m_CqrsEngine.PublishEvent(@event, endpoint, processingGroupName);

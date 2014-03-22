@@ -104,16 +104,16 @@ namespace Inceptum.Cqrs.Routing
     {
         private readonly Dictionary<RoutingKey,Endpoint> m_MessageRoutes =new Dictionary<RoutingKey, Endpoint>();
         private readonly Dictionary<RoutingKey, IEndpointResolver> m_RouteResolvers = new Dictionary<RoutingKey, IEndpointResolver>();
-        private readonly string m_BoundedContext;
+        private readonly string m_Context;
         public string Name { get; set; }
         public RouteType? Type { get; set; }
 
        
 
-        public Route(string name, string boundedContext)
+        public Route(string name, string context)
         {
             ProcessingGroup=new ProcessingGroupInfo();
-            m_BoundedContext = boundedContext;
+            m_Context = context;
             Name = name;
         }
 
@@ -130,7 +130,7 @@ namespace Inceptum.Cqrs.Routing
 
         public string ProcessingGroupName
         {
-            get { return string.Format("cqrs.{0}.{1}", m_BoundedContext, Name); }
+            get { return string.Format("cqrs.{0}.{1}", m_Context??"default", Name); }
         }
 
         public ProcessingGroupInfo ProcessingGroup { get; set; }
@@ -143,7 +143,7 @@ namespace Inceptum.Cqrs.Routing
                 throw new ConfigurationErrorsException(string.Format("Can not publish commands with events route '{0}'.",Name));
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_BoundedContext,
+                LocalBoundedContext = m_Context,
                 MessageType = command,
                 Priority = priority,
                 RouteType = Type.Value,
@@ -162,7 +162,7 @@ namespace Inceptum.Cqrs.Routing
 
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_BoundedContext,
+                LocalBoundedContext = m_Context,
                 MessageType = command,
                 Priority = priority,
                 RouteType = Type.Value,
@@ -182,7 +182,7 @@ namespace Inceptum.Cqrs.Routing
 
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_BoundedContext,
+                LocalBoundedContext = m_Context,
                 RouteType = Type.Value,
                 MessageType = @event,
                 Priority = priority,
@@ -200,7 +200,7 @@ namespace Inceptum.Cqrs.Routing
 
             var routingKey = new RoutingKey
             {
-                LocalBoundedContext = m_BoundedContext,
+                LocalBoundedContext = m_Context,
                 RouteType = Type.Value,
                 MessageType = @event,
                 RemoteBoundedContext = remoteBoundedContext,

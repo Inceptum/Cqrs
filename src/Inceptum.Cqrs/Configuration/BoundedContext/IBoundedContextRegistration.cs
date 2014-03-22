@@ -1,35 +1,15 @@
 using System;
 using EventStore.ClientAPI;
+using Inceptum.Cqrs.Configuration.Routing;
 using NEventStore;
 using NEventStore.Dispatcher;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
-
-    public class Saga<TSaga>
-    {
-        public static ISagaRegistration Named(string name)
-        {
-            return new SagaRegistration(name,typeof(TSaga));
-        }
-    }
-
-   
-
-    public interface ISagaRegistration : IRegistration, IHideObjectMembers
-    {
-        string Name { get; }
-        IListeningEventsDescriptor<ISagaRegistration> ListeningEvents(params Type[] types);
-        IPublishingCommandsDescriptor<ISagaRegistration> PublishingCommands(params Type[] commandsTypes);
-        ProcessingOptionsDescriptor<ISagaRegistration> ProcessingOptions(string route);
-    }
- 
-
     public interface IBoundedContextRegistration : IRegistration, IHideObjectMembers
     {
         string Name { get; }
-        long FailedCommandRetryDelayInternal { get; set; }
-
+ 
         IBoundedContextRegistration FailedCommandRetryDelay(long delay);
         IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(params Type[] commandsTypes);
 
