@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Inceptum.Cqrs.Configuration.Saga;
 
 namespace Inceptum.Cqrs.Configuration.Routing
 {
@@ -38,7 +39,7 @@ namespace Inceptum.Cqrs.Configuration.Routing
     
             foreach (var type in m_Types)
             {
-                routeMap[Route].AddSubscribedEvent(type, 0, m_BoundedContext, EndpointResolver);
+                routeMap[Route].AddSubscribedEvent(type, 0, m_BoundedContext, EndpointResolver,typeof(TRegistration)!=typeof(ISagaRegistration));
             }
         }
 

@@ -20,6 +20,7 @@ namespace Inceptum.Cqrs.Routing
         public uint Priority { get; set; }
         public string LocalContext { get; set; }
         public string RemoteBoundedContext { get; set; }
+        public bool Exclusive { get; set; }
 
         protected bool Equals(RoutingKey other)
         {
@@ -27,6 +28,7 @@ namespace Inceptum.Cqrs.Routing
                    CommunicationType == other.CommunicationType &&
                    RouteType == other.RouteType &&
                    Priority == other.Priority &&
+                   Exclusive == other.Exclusive &&
                    string.Equals(RemoteBoundedContext, other.RemoteBoundedContext) &&
                    string.Equals(LocalContext, other.LocalContext) &&
                    m_Hints.Keys.Count == other.m_Hints.Keys.Count &&
@@ -49,6 +51,8 @@ namespace Inceptum.Cqrs.Routing
                     return RemoteBoundedContext;
                 if (StringComparer.InvariantCultureIgnoreCase.Compare(key, "LocalBoundedContext") == 0)
                     return LocalContext;
+                if (StringComparer.InvariantCultureIgnoreCase.Compare(key, "Exclusive") == 0)
+                    return Exclusive.ToString();
                 string value;
                 m_Hints.TryGetValue(key, out value);
                 return value;
@@ -60,7 +64,8 @@ namespace Inceptum.Cqrs.Routing
                 StringComparer.InvariantCultureIgnoreCase.Compare(key, "CommunicationType") == 0 ||
                 StringComparer.InvariantCultureIgnoreCase.Compare(key, "RouteType") == 0 ||
                 StringComparer.InvariantCultureIgnoreCase.Compare(key, "RemoteBoundContext") == 0||
-                StringComparer.InvariantCultureIgnoreCase.Compare(key, "LocalBoundedContext") == 0)
+                StringComparer.InvariantCultureIgnoreCase.Compare(key, "LocalBoundedContext") == 0||
+                StringComparer.InvariantCultureIgnoreCase.Compare(key, "Exclusive") == 0)
                     throw new ArgumentException(key + " should be set with corresponding RoutingKey property", "key");
                 m_Hints[key] = value;
             }
@@ -81,6 +86,7 @@ namespace Inceptum.Cqrs.Routing
                 hashCode = (hashCode*397) ^ CommunicationType.GetHashCode();
                 hashCode = (hashCode * 397) ^ RouteType.GetHashCode();
                 hashCode = (hashCode*397) ^ (int) Priority;
+                hashCode = (hashCode * 397) ^ Exclusive.GetHashCode();
                 hashCode = (hashCode * 397) ^ (LocalContext != null ? LocalContext.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (RemoteBoundedContext != null ? RemoteBoundedContext.GetHashCode() : 0);
                 hashCode = m_Hints.Keys.OrderBy(k=>k).Aggregate(hashCode, (h, key) => (h * 397) ^ key.GetHashCode());
@@ -186,12 +192,12 @@ namespace Inceptum.Cqrs.Routing
                 RouteType = Type.Value,
                 MessageType = @event,
                 Priority = priority,
-                CommunicationType = CommunicationType.Publish 
+                CommunicationType = CommunicationType.Publish  
             };
             m_RouteResolvers[routingKey] = resolver;
         }
 
-        public void AddSubscribedEvent(Type @event, uint priority,string remoteBoundedContext, IEndpointResolver resolver)
+        public void AddSubscribedEvent(Type @event, uint priority, string remoteBoundedContext, IEndpointResolver resolver, bool exclusive)
         {
             if (Type == null)
                 Type = RouteType.Events;
@@ -205,7 +211,10 @@ namespace Inceptum.Cqrs.Routing
                 MessageType = @event,
                 RemoteBoundedContext = remoteBoundedContext,
                 Priority = priority,
-                CommunicationType = CommunicationType.Subscribe 
+                CommunicationType = CommunicationType.Subscribe,
+                Exclusive = exclusive
+
+
             };
             m_RouteResolvers[routingKey] = resolver;
         }

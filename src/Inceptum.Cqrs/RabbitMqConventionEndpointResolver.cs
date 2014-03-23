@@ -11,13 +11,25 @@ namespace Inceptum.Cqrs
         readonly Dictionary<Tuple<string, RoutingKey>, Endpoint> m_Cache = new Dictionary<Tuple<string, RoutingKey>, Endpoint>();
         private readonly string m_Transport;
         private string m_SerializationFormat;
+        private readonly string m_ExclusiveQueuePostfix;
+        private string m_EnvironmentPrefix;
 
-        public RabbitMqConventionEndpointResolver(string transport,string serializationFormat)
+        public RabbitMqConventionEndpointResolver(string transport,string serializationFormat,string exclusiveQueuePostfix=null,string environment=null)
         {
+            m_EnvironmentPrefix = environment!=null?environment+".":"";
+            m_ExclusiveQueuePostfix = "." + (environment ?? Environment.MachineName);
             m_Transport = transport;
             m_SerializationFormat = serializationFormat;
         }
 
+        private string createQueueName(string queue,bool exclusive)
+        {
+            return string.Format("{0}{1}{2}", m_EnvironmentPrefix, queue, exclusive ? m_ExclusiveQueuePostfix : "");
+        }
+       private string createExchangeName(string exchange)
+        {
+            return string.Format("topic://{0}{1}", m_EnvironmentPrefix, exchange);
+        }
 
 
         private Endpoint createEndpoint(string route, RoutingKey key)
@@ -31,8 +43,8 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalContext, key.RouteType.ToString().ToLower(), rmqRoutingKey),
-                        Subscribe = string.Format("{0}.queue.{1}.{2}", key.LocalContext, key.RouteType.ToString().ToLower(), queueName)
+                        Publish = createExchangeName(string.Format("{0}.{1}.exchange/{2}", key.LocalContext, key.RouteType.ToString().ToLower(), rmqRoutingKey)),
+                        Subscribe = createQueueName(string.Format("{0}.queue.{1}.{2}", key.LocalContext, key.RouteType.ToString().ToLower(), queueName),key.Exclusive)
                     },
                     SerializationFormat = m_SerializationFormat,
                     SharedDestination = true,
@@ -47,7 +59,7 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), rmqRoutingKey),
+                        Publish = createExchangeName(string.Format("{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), rmqRoutingKey)),
                         Subscribe = null
                     },
                     SerializationFormat = m_SerializationFormat,
@@ -62,8 +74,8 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
-                        Subscribe =  string.Format("{0}.queue.{1}.{2}.{3}", key.LocalContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route)
+                        Publish =createExchangeName(string.Format("{0}.{1}.exchange/{2}", key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), key.MessageType.Name)),
+                        Subscribe = createQueueName( string.Format("{0}.queue.{1}.{2}.{3}", key.LocalContext, key.RemoteBoundedContext, key.RouteType.ToString().ToLower(), route),key.Exclusive)
                     },
                     SerializationFormat = m_SerializationFormat,
                     SharedDestination = true,
@@ -78,7 +90,7 @@ namespace Inceptum.Cqrs
                 {
                     Destination = new Destination
                     {
-                        Publish = string.Format("topic://{0}.{1}.exchange/{2}", key.LocalContext, key.RouteType.ToString().ToLower(), key.MessageType.Name),
+                        Publish = createExchangeName(string.Format("{0}.{1}.exchange/{2}", key.LocalContext, key.RouteType.ToString().ToLower(), key.MessageType.Name)),
                         Subscribe = null
                     },
                     SerializationFormat = m_SerializationFormat,
