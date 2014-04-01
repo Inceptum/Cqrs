@@ -17,6 +17,7 @@ using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.RabbitMq;
 using NEventStore;
+using NEventStore.Dispatcher;
 using NEventStore.Logging;
 using NUnit.Framework;
 using Rhino.Mocks;
@@ -572,8 +573,8 @@ namespace Inceptum.Cqrs.Tests
 
             Thread.Sleep(10000);
         }
-    
 
+    
         [Test]
         //[Ignore("Does not work on tc")]
   //      [TestCase(true, TestName = "GetEventStore")]

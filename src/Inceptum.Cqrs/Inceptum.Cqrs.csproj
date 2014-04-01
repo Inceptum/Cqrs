@@ -162,6 +162,7 @@
     <Compile Include="EventDispatcher.cs" />
     <Compile Include="ICommandSender.cs" />
     <Compile Include="InMemoryEndpointResolver.cs" />
+    <Compile Include="NEventStore\EventUpgradePipelineHook .cs" />
     <Compile Include="OptionalParameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RabbitMqConventionEndpointResolver.cs" />
