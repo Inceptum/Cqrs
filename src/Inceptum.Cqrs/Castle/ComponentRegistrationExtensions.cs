@@ -32,5 +32,14 @@ namespace Castle.MicroKernel.Registration
                     IsProcess = true
                 });
         }
+
+
+        public static ComponentRegistration<T> WithRepositoryAccess<T>(this ComponentRegistration<T> registration, string localBoundedContext) where T : class
+        {
+            return registration.ExtendedProperties(new
+            {
+                DependsOnBoundedContextRepository = localBoundedContext,
+            });
+        }  
     }
 }

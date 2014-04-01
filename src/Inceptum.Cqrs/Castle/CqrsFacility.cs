@@ -7,6 +7,7 @@ using Castle.MicroKernel;
 using Castle.MicroKernel.Context;
 using Castle.MicroKernel.Facilities;
 using Castle.MicroKernel.Registration;
+using CommonDomain.Persistence;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.Configuration.BoundedContext;
 using IRegistration = Inceptum.Cqrs.Configuration.IRegistration;
@@ -39,13 +40,15 @@ namespace Inceptum.Cqrs.Castle
         }
     }
 
-    public class CqrsFacility : AbstractFacility,  ICqrsEngineBootstrapper
+    public class CqrsFacility : AbstractFacility, ICqrsEngineBootstrapper, ISubDependencyResolver
     {
         private readonly string m_EngineComponetName = Guid.NewGuid().ToString();
         private readonly Dictionary<IHandler, Action<IHandler>> m_WaitList = new Dictionary<IHandler, Action<IHandler>>();
         private IRegistration[] m_BoundedContexts = new IRegistration[0];
         private bool m_InMemory=false;
         private static bool m_CreateMissingEndpoints = false;
+        private ICqrsEngine m_CqrsEngine;
+        public bool HasEventStore { get; set; }
 
         public CqrsFacility RunInMemory()
         {
@@ -99,8 +102,13 @@ namespace Inceptum.Cqrs.Castle
 
             var isCommandsHandler = (bool)(handler.ComponentModel.ExtendedProperties["IsCommandsHandler"] ?? false);
             var isProjection = (bool)(handler.ComponentModel.ExtendedProperties["IsProjection"] ?? false);
-            var isSaga = (bool)(handler.ComponentModel.ExtendedProperties["isSaga"] ?? false);
             var isProcess = (bool)(handler.ComponentModel.ExtendedProperties["isProcess"] ?? false);
+            var dependsOnBoundedContextRepository = handler.ComponentModel.ExtendedProperties["dependsOnBoundedContextRepository"];
+            if (dependsOnBoundedContextRepository != null)
+            {
+                handler.ComponentModel.Dependencies.Add(new DependencyModel(m_EngineComponetName, typeof(ICqrsEngine), false));
+                return;
+            }
 
             if (isCommandsHandler && isProjection)
                 throw new InvalidOperationException("Component can not be projection and commands handler simultaneousely");
@@ -157,6 +165,7 @@ namespace Inceptum.Cqrs.Castle
                 ? Component.For<ICqrsEngine>().ImplementedBy<InMemoryCqrsEngine>()
                 : Component.For<ICqrsEngine>().ImplementedBy<CqrsEngine>().DependsOn(new { createMissingEndpoints = m_CreateMissingEndpoints });
             Kernel.Register(Component.For<IDependencyResolver>().ImplementedBy<CastleDependencyResolver>());
+            Kernel.Resolver.AddSubResolver(this);
             Kernel.Register(engineReg.Named(m_EngineComponetName).DependsOn(new
                 {
                     registrations = m_BoundedContexts.ToArray()
@@ -166,7 +175,18 @@ namespace Inceptum.Cqrs.Castle
                            Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new {kernel = Kernel}));
            */
 
-            Kernel.Resolve<ICqrsEngine>();
+            m_CqrsEngine = Kernel.Resolve<ICqrsEngine>();
+        }
+        public bool CanResolve(CreationContext context, ISubDependencyResolver contextHandlerResolver, ComponentModel model, DependencyModel dependency)
+        {
+            var dependsOnBoundedContextRepository = model.ExtendedProperties["dependsOnBoundedContextRepository"] as string;
+            return dependency.TargetType == typeof(IRepository) && dependsOnBoundedContextRepository != null  && m_BoundedContexts.Select(c=>c as BoundedContextRegistration).Where(c=>c!=null).Any(c => c.Name == dependsOnBoundedContextRepository && c.HasEventStore);
+        }
+
+        public object Resolve(CreationContext context, ISubDependencyResolver contextHandlerResolver, ComponentModel model, DependencyModel dependency)
+        {
+            var dependsOnBoundedContextRepository = model.ExtendedProperties["dependsOnBoundedContextRepository"] as string;
+            return m_CqrsEngine.GetRepository(dependsOnBoundedContextRepository);
         }
     }
 

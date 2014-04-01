@@ -3,6 +3,7 @@ using EventStore.ClientAPI;
 using Inceptum.Cqrs.Configuration.Routing;
 using NEventStore;
 using NEventStore.Dispatcher;
+using NEventStore.Persistence.SqlPersistence;
 
 namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
@@ -32,9 +33,11 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         IBoundedContextRegistration WithProjection<TListener>(string fromBoundContext);
 
 
-        IBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore);
-        IBoundedContextRegistration WithEventStore(IEventStoreConnection eventStoreConnection);
-
+        IBoundedContextRegistration WithEventStore<T>() where T : IEventStoreAdapter;
+        IBoundedContextRegistration WithEventStore(IEventStoreAdapter eventStoreAdapter);
+        IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore);
+        IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore);
+        IBoundedContextRegistration WithGetEventStore(IEventStoreConnection eventStoreConnection);
 
         IBoundedContextRegistration WithProcess(object process);
         IBoundedContextRegistration WithProcess(Type process);

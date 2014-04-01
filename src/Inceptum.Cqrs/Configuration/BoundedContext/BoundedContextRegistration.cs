@@ -3,12 +3,13 @@ using EventStore.ClientAPI;
 using Inceptum.Cqrs.Configuration.Routing;
 using NEventStore;
 using NEventStore.Dispatcher;
+using NEventStore.Persistence.SqlPersistence;
 
 namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
     public class BoundedContextRegistration : ContextRegistrationBase<IBoundedContextRegistration>, IBoundedContextRegistration
     {
-         
+        public bool HasEventStore { get; set; }  
         public BoundedContextRegistration(string name):base(name)
         {
             
@@ -34,13 +35,38 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         }
  
 
-        public IBoundedContextRegistration WithEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
+       public IBoundedContextRegistration WithEventStore<T>()
+            where T:IEventStoreAdapter
         {
-            AddDescriptor(new EventStoreDescriptor(configureEventStore));
+            HasEventStore = true;
+            AddDescriptor(new EventStoreDescriptor<T>());
             return this;
         }
-        public IBoundedContextRegistration WithEventStore(IEventStoreConnection eventStoreConnection)
+
+       public IBoundedContextRegistration WithEventStore(IEventStoreAdapter eventStoreAdapter)
         {
+            HasEventStore = true;
+            AddDescriptor(new EventStoreDescriptor(eventStoreAdapter));
+            return this;
+        }
+
+       public IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
+        {
+            HasEventStore = true;
+            AddDescriptor(new NEventStoreDescriptor((commits, factory) => configureEventStore(commits)));
+            return this;
+        }
+
+        public IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
+        {
+            HasEventStore = true;
+            AddDescriptor(new NEventStoreDescriptor(configureEventStore));
+            return this;
+        }
+
+        public IBoundedContextRegistration WithGetEventStore(IEventStoreConnection eventStoreConnection)
+        {
+            HasEventStore = true;
             AddDescriptor(new GetEventStoreDescriptor(eventStoreConnection));
             return this;
         }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using System.Text;
+using CommonDomain.Persistence;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
 using Inceptum.Messaging.Configuration;
@@ -368,10 +369,19 @@ namespace Inceptum.Cqrs
             get { return m_DependencyResolver; }
         }
 
+
+        public IRepository GetRepository(string boundedContext)
+        {
+            var context = m_Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
+            if (context == null)
+                throw new ArgumentException(string.Format("bound context {0} not found", boundedContext), "boundedContext");
+            return context.EventStore.Repository;
+        }
     }
 
     public interface ICqrsEngine
     {
+        IRepository GetRepository(string boundedContext);
         void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types);
         void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0);
     }

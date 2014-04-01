@@ -6,7 +6,7 @@ using Inceptum.Messaging.Contract;
 
 namespace Inceptum.Cqrs
 {
-    internal class InMemoryEndpointResolver:IEndpointResolver
+    public class InMemoryEndpointResolver:IEndpointResolver
     {
         
         public Endpoint Resolve(string route, RoutingKey key, IEndpointProvider endpointProvider)

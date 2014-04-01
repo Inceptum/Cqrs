@@ -7,17 +7,29 @@ using Castle.Core.Logging;
 using Castle.Facilities.Startable;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
+using CommonDomain.Persistence;
 using Inceptum.Cqrs.Castle;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
 using Inceptum.Cqrs.Routing;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
+using NEventStore;
+using NEventStore.Logging;
 using NUnit.Framework;
 using Rhino.Mocks;
 
 namespace Inceptum.Cqrs.Tests
 {
+    class RepositoryDependentComponent
+    {
+        public IRepository Repository { get; set; }
+
+        public RepositoryDependentComponent(IRepository repository)
+        {
+            Repository = repository;
+        }
+    }
 
     internal class CommandsHandler
     {
@@ -330,7 +342,29 @@ namespace Inceptum.Cqrs.Tests
                 Assert.That(TestSaga.Complete.WaitOne(1000), Is.True, "Saga has not got events or failed to send command");
             }
         }
-
+        [Test]
+        public void WithRepositoryAccessTest()
+        {
+            var log = MockRepository.GenerateMock<ILog>();
+            using (var container = new WindsorContainer())
+            {
+                container
+                    .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(Register.BoundedContext("bc")
+                         .WithNEventStore(dispatchCommits => Wireup.Init()
+                                                                            .LogTo(type => log)
+                                                                            .UsingInMemoryPersistence()
+                                                                            .InitializeStorageEngine()
+                                                                            .UsingJsonSerialization()
+                                                                            .UsingSynchronousDispatchScheduler()
+                                                                            .DispatchTo(dispatchCommits))))
+                    .Register(Component.For<RepositoryDependentComponent>().WithRepositoryAccess("bc"))
+                    .Resolve<ICqrsEngineBootstrapper>().Start();
+                var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
+                var repositoryDependentComponent = container.Resolve<RepositoryDependentComponent>();
+                Assert.That(repositoryDependentComponent.Repository, Is.Not.Null, "Repository was not injected");
+            }
+        }
 
     }
 

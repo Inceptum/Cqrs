@@ -592,11 +592,11 @@ namespace Inceptum.Cqrs.Tests
             {
                 var eventStoreConnection = EventStoreConnection.Create(ConnectionSettings.Default, new IPEndPoint(IPAddress.Loopback, 1113));
                 eventStoreConnection.Connect();
-                localBoundedContext.WithEventStore(eventStoreConnection);
+                localBoundedContext.WithGetEventStore(eventStoreConnection);
             }
             else
             {
-                localBoundedContext.WithEventStore(dispatchCommits => Wireup.Init()
+                localBoundedContext.WithNEventStore(dispatchCommits => Wireup.Init()
                     .LogTo(type => log)
                     .UsingInMemoryPersistence()
                     .InitializeStorageEngine()
@@ -643,7 +643,7 @@ namespace Inceptum.Cqrs.Tests
                 .ListeningCommands(typeof(string)).On("commands").WithLoopback()
                 .ListeningInfrastructureCommands().On("commands").WithLoopback()
                 .WithCommandsHandler<EsCommandHandler>()
-                .WithEventStore(dispatchCommits => Wireup.Init()
+                .WithNEventStore(dispatchCommits => Wireup.Init()
                     .LogToOutputWindow()
                     .UsingInMemoryPersistence()
                     .InitializeStorageEngine()
@@ -686,7 +686,7 @@ namespace Inceptum.Cqrs.Tests
                 .ListeningCommands(typeof(string)).On("commands").WithLoopback()
                 .ListeningInfrastructureCommands().On("commands").WithLoopback()
                 .WithCommandsHandler<EsCommandHandler>()
-                .WithEventStore(dispatchCommits => Wireup.Init()
+                .WithNEventStore(dispatchCommits => Wireup.Init()
                     .LogTo(type => log)
                     .UsingInMemoryPersistence()
                     .InitializeStorageEngine()

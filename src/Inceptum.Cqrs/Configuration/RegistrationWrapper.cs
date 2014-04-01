@@ -6,6 +6,7 @@ using Inceptum.Cqrs.Configuration.Routing;
 using Inceptum.Cqrs.Configuration.Saga;
 using NEventStore;
 using NEventStore.Dispatcher;
+using NEventStore.Persistence.SqlPersistence;
 
 namespace Inceptum.Cqrs.Configuration
 {
@@ -117,15 +118,38 @@ namespace Inceptum.Cqrs.Configuration
             return wrapper.Registration.WithCommandsHandler(handler);
         }
 
-        public static IBoundedContextRegistration WithEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func<IDispatchCommits, Wireup> configureEventStore)
+
+        
+
+        public static IBoundedContextRegistration WithEventStore<T>(this IRegistrationWrapper<IBoundedContextRegistration> wrapper)
+            where T : IEventStoreAdapter
         {
-            return wrapper.Registration.WithEventStore(configureEventStore);
+             
+            return wrapper.Registration.WithEventStore<T>();
         }
 
-        public static IBoundedContextRegistration WithEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, IEventStoreConnection eventStoreConnection)
+        public static IBoundedContextRegistration WithEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, IEventStoreAdapter eventStoreAdapter)
         {
-            return wrapper.Registration.WithEventStore(eventStoreConnection);
+            return wrapper.Registration.WithEventStore(eventStoreAdapter);
         }
+
+        public static IBoundedContextRegistration WithNEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func<IDispatchCommits, Wireup> configureEventStore)
+        {
+            return wrapper.Registration.WithNEventStore(configureEventStore);
+        }
+
+        public static IBoundedContextRegistration WithNEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
+        {
+            return wrapper.Registration.WithNEventStore(configureEventStore);
+        }
+
+        public static IBoundedContextRegistration WithGetEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, IEventStoreConnection eventStoreConnection)
+        {
+            return wrapper.Registration.WithGetEventStore(eventStoreConnection);
+        }
+
+
+
 
         public static IBoundedContextRegistration WithProjection(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, object projection, string fromBoundContext)
         {

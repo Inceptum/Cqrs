@@ -5,7 +5,7 @@ using EventStore.ClientAPI;
 
 namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
-    internal class GetEventStoreDescriptor : IDescriptor<Context>
+    internal class GetEventStoreDescriptor : EventStoreDescriptorBase
     {
         private readonly IEventStoreConnection m_EventStoreConnection;
 
@@ -14,22 +14,12 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             m_EventStoreConnection = eventStoreConnection;
         }
 
-        public IEnumerable<Type> GetDependencies()
+        protected override IEventStoreAdapter CreateEventStore(Context boundedContext, IDependencyResolver resolver)
         {
-            return new Type[0];
-        }
-
-        public void Create(Cqrs.Context context, IDependencyResolver resolver)
-        {
-            var aggregateConstructor = resolver.HasService(typeof (IConstructAggregates))
-                                           ? (IConstructAggregates) resolver.GetService(typeof (IConstructAggregates))
-                                           : null;
-            context.EventStore = new GetEventStoreAdapter(m_EventStoreConnection, context.EventsPublisher, aggregateConstructor);
-        }
-
-        public void Process(Cqrs.Context context, CqrsEngine cqrsEngine)
-        {
-
+            var aggregateConstructor = resolver.HasService(typeof(IConstructAggregates))
+                                        ? (IConstructAggregates)resolver.GetService(typeof(IConstructAggregates))
+                                        : null;
+            return new GetEventStoreAdapter(m_EventStoreConnection, boundedContext.EventsPublisher, aggregateConstructor);
         }
     }
 }

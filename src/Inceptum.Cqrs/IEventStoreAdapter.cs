@@ -4,7 +4,7 @@ using CommonDomain.Persistence;
 
 namespace Inceptum.Cqrs
 {
-    internal interface IEventStoreAdapter
+    public interface IEventStoreAdapter
     {
         IRepository Repository { get; }
         IEnumerable<object> GetEventsFrom(DateTime @from, params Type[] types);

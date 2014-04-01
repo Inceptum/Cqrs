@@ -4,37 +4,85 @@ using CommonDomain.Persistence;
 using Inceptum.Cqrs.EventSourcing;
 using NEventStore;
 using NEventStore.Dispatcher;
+using NEventStore.Persistence.SqlPersistence;
 
 namespace Inceptum.Cqrs.Configuration.BoundedContext
 {
-    internal class EventStoreDescriptor : IDescriptor<Context>
+    internal class EventStoreDescriptor<T> : EventStoreDescriptorBase where T : IEventStoreAdapter
     {
-        private readonly Func<IDispatchCommits, Wireup> m_ConfigureEventStore;
+        public override IEnumerable<Type> GetDependencies()
+        {
+            return new Type[] { typeof(T) };
+        }
 
-        public EventStoreDescriptor(Func<IDispatchCommits, Wireup> configureEventStore)
+
+        protected override IEventStoreAdapter CreateEventStore(Context boundedContext, IDependencyResolver resolver)
+        {
+            return (T)resolver.GetService(typeof(T));
+        }
+    }
+
+    abstract class EventStoreDescriptorBase : IDescriptor<Context>
+    {
+
+
+        public virtual IEnumerable<Type> GetDependencies()
+        {
+            return new Type[0];
+        }
+
+        public void Create(Context boundedContext, IDependencyResolver resolver)
+        {
+            boundedContext.EventStore = CreateEventStore(boundedContext,resolver);
+        }
+
+        public void Process(Context boundedContext, CqrsEngine cqrsEngine)
+        {
+            
+        }
+
+        protected abstract IEventStoreAdapter CreateEventStore(Context boundedContext, IDependencyResolver resolver);
+
+    }
+    class EventStoreDescriptor : EventStoreDescriptorBase
+    {
+        private readonly IEventStoreAdapter m_EventStoreAdapter;
+        public EventStoreDescriptor(IEventStoreAdapter eventStoreAdapter)
+        {
+            m_EventStoreAdapter = eventStoreAdapter;
+        }
+
+        protected override IEventStoreAdapter CreateEventStore(Context boundedContext, IDependencyResolver resolver)
+        {
+            return m_EventStoreAdapter;
+        }
+    }
+
+
+    internal class NEventStoreDescriptor : EventStoreDescriptorBase
+    {
+        private readonly Func<IDispatchCommits, IConnectionFactory, Wireup> m_ConfigureEventStore;
+        private IConstructAggregates m_ConstructAggregates;
+        private IConnectionFactory m_ConnectionFactory;
+
+        public NEventStoreDescriptor(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
         {
             if (configureEventStore == null) throw new ArgumentNullException("configureEventStore");
             m_ConfigureEventStore = configureEventStore;
         }
 
-        public IEnumerable<Type> GetDependencies()
+        protected override IEventStoreAdapter CreateEventStore(Context boundedContext, IDependencyResolver resolver)
         {
-            return new Type[0];
-        }
+            m_ConstructAggregates = resolver.HasService(typeof(IConstructAggregates))
+                ? (IConstructAggregates)resolver.GetService(typeof(IConstructAggregates))
+                : null;
 
-        public void Create(Cqrs.Context context, IDependencyResolver resolver)
-        {
-            IStoreEvents eventStore = m_ConfigureEventStore(new CommitDispatcher(context.EventsPublisher)).Build();
+            m_ConnectionFactory = resolver.HasService(typeof(IConnectionFactory))
+                ? (IConnectionFactory)resolver.GetService(typeof(IConnectionFactory))
+                : new ConfigurationConnectionFactory(null);
 
-            context.EventStore = new NEventStoreAdapter(eventStore,
-                                                               resolver.HasService(typeof (IConstructAggregates))
-                                                                   ? (IConstructAggregates)resolver.GetService(typeof(IConstructAggregates))
-                                                                   : null);
-        }
-
-        public void Process(Cqrs.Context context, CqrsEngine cqrsEngine)
-        {
-
+            IStoreEvents eventStore = m_ConfigureEventStore(new CommitDispatcher(boundedContext.EventsPublisher), m_ConnectionFactory).Build();
+            return new NEventStoreAdapter(eventStore, m_ConstructAggregates);
         }
     }
 }
