@@ -12,7 +12,7 @@ namespace Inceptum.Cqrs
         private readonly string m_Transport;
         private string m_SerializationFormat;
         private readonly string m_ExclusiveQueuePostfix;
-        private string m_EnvironmentPrefix;
+        private readonly string m_EnvironmentPrefix;
 
         public RabbitMqConventionEndpointResolver(string transport,string serializationFormat,string exclusiveQueuePostfix=null,string environment=null)
         {
