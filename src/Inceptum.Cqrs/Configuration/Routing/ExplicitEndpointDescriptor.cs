@@ -21,5 +21,11 @@ namespace Inceptum.Cqrs.Configuration.Routing
             m_Descriptor.AddExplicitEndpoint(criteria, m_Endpoint);
             return m_Descriptor;
         }
+
+        public TDescriptor ForAllRoutingKey()
+        {
+            m_Descriptor.AddExplicitEndpoint(key => true, m_Endpoint);
+            return m_Descriptor;
+        }
     }
 }
