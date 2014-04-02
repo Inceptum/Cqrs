@@ -17,7 +17,7 @@ namespace Inceptum.Cqrs
         public RabbitMqConventionEndpointResolver(string transport,string serializationFormat,string exclusiveQueuePostfix=null,string environment=null)
         {
             m_EnvironmentPrefix = environment!=null?environment+".":"";
-            m_ExclusiveQueuePostfix = "." + (environment ?? Environment.MachineName);
+            m_ExclusiveQueuePostfix = "." + (exclusiveQueuePostfix ?? Environment.MachineName);
             m_Transport = transport;
             m_SerializationFormat = serializationFormat;
         }
