@@ -170,10 +170,8 @@ namespace Inceptum.Cqrs.Castle
                 {
                     registrations = m_BoundedContexts.ToArray()
                 }));
-            /*
-              Kernel.Register(
-                           Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new {kernel = Kernel}));
-           */
+            Kernel.Register(
+                  Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new { kernel = Kernel }));
 
             m_CqrsEngine = Kernel.Resolve<ICqrsEngine>();
         }
@@ -243,7 +241,7 @@ namespace Inceptum.Cqrs.Castle
 
         public void SendCommand<T>(T command, string remoteBoundedContext, uint priority = 0)
         {
-            throw new NotImplementedException();
+            CqrsEngine.SendCommand(command,null,remoteBoundedContext,priority);
         }
 
         public void ReplayEvents(string remoteBoundedContext, params Type[] types)

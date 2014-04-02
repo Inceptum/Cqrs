@@ -289,16 +289,26 @@ namespace Inceptum.Cqrs
 
         public void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0)
         {
-            if(!sendMessage(typeof(T),command,RouteType.Commands,boundedContext,priority,remoteBoundedContext))
-                throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}", boundedContext, typeof(T), priority));
+            if (!sendMessage(typeof (T), command, RouteType.Commands, boundedContext, priority, remoteBoundedContext))
+            {
+                if(boundedContext!=null)
+                    throw new InvalidOperationException(string.Format("bound context '{0}' does not support command '{1}' with priority {2}", boundedContext, typeof(T), priority));
+                throw new InvalidOperationException(string.Format("Default route map does not contain rout for command '{0}' with priority {1}", typeof(T), priority));
+            }
         }
 
-        private bool sendMessage(Type type, object message, RouteType routeType, string boundedContext, uint priority, string remoteBoundedContext=null)
+        private bool sendMessage(Type type, object message, RouteType routeType, string context, uint priority, string remoteBoundedContext=null)
         {
-            var context = Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
-            if (context == null)
-                throw new ArgumentException(string.Format("bound context {0} not found", boundedContext), "boundedContext");
-            var published = context.PublishMessage(m_MessagingEngine,type,message, routeType, priority, remoteBoundedContext);
+            RouteMap routeMap = DefaultRouteMap;
+            if (context != null)
+            {
+                routeMap = Contexts.FirstOrDefault(bc => bc.Name == context);
+                if (routeMap == null)
+                {
+                    throw new ArgumentException(string.Format("bound context {0} not found", context), "context");
+                }
+            }
+            var published = routeMap.PublishMessage(m_MessagingEngine, type, message, routeType, priority, remoteBoundedContext);
             if (!published && routeType == RouteType.Commands)
             {
                 published = DefaultRouteMap.PublishMessage(m_MessagingEngine,type,message, routeType, priority, remoteBoundedContext);

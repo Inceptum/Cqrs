@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Castle.Core.Logging;
 using Castle.Facilities.Startable;
+using Castle.MicroKernel.Handlers;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using CommonDomain.Persistence;
@@ -194,28 +195,35 @@ namespace Inceptum.Cqrs.Tests
 
 
         [Test]
-        [Ignore("")]
         public void DependencyOnICommandSenderTest()
         {
             using (var container = new WindsorContainer())
             {
                 var messagingEngine = MockRepository.GenerateMock<IMessagingEngine>();
-                container
+                var bootstrapper = container
                     .Register(Component.For<IMessagingEngine>().Instance(messagingEngine))
                     .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(
-                            Register.BoundedContext("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback())
-                            )
-                    //    .Register(Component.For<EventListenerWithICommandSenderDependency>().AsSaga("bc", "remoteBc"))
+                        Register.BoundedContext("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback(),
+                        Register.DefaultRouting.PublishingCommands(typeof(string)).To("bc").With("default"))
+                    )
+                    .Register(Component.For<CommandSenderDependentComponent>())
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
-                    .Resolve<ICqrsEngineBootstrapper>().Start();
-
-                var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
-                cqrsEngine.Contexts.First(c => c.Name == "bc").EventDispatcher.Dispacth("remoteBc", "some event", (delay, acknowledge) => { });
-
-                var listener = container.Resolve<EventListenerWithICommandSenderDependency>();
+                    .Resolve<ICqrsEngineBootstrapper>();
+                HandlerException exception = null;
+                try
+                {
+                    container.Resolve<CommandSenderDependentComponent>();
+                }
+                catch (HandlerException e)
+                {
+                    exception = e;
+                }
+                Assert.That(exception, Is.Not.Null,"Component with ICommandSender dependency is resolvable before cqrs engine is bootstrapped");
+                Assert.That(exception.Message.Contains("Service 'Inceptum.Cqrs.ICommandSender' which was not registered"), Is.True, "Component with ICommandSender dependency is resolvable before cqrs engine is bootstrapped");
+                bootstrapper.Start();
+                var component = container.Resolve<CommandSenderDependentComponent>();
+                component.CommandSender.SendCommand("test", "bc");
                 var commandsHandler = container.Resolve<CommandsHandler>();
-                Assert.That(listener.Sender, Is.Not.Null);
-                listener.Sender.SendCommand("test", "bc");
                 Thread.Sleep(200);
                 Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] { "test" }), "Command was not dispatched");
             }
@@ -385,6 +393,16 @@ namespace Inceptum.Cqrs.Tests
         }
     }
 
+
+    public class CommandSenderDependentComponent
+    {
+        public ICommandSender CommandSender { get; private set; }
+
+        public CommandSenderDependentComponent(ICommandSender commandSender)
+        {
+            CommandSender = commandSender;
+        }
+    }
 
     public class EventListenerWithICommandSenderDependency
     {
