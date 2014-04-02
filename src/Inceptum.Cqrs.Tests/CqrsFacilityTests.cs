@@ -204,7 +204,7 @@ namespace Inceptum.Cqrs.Tests
                     .Register(Component.For<IMessagingEngine>().Instance(messagingEngine))
                     .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(
                         Register.BoundedContext("bc").ListeningCommands(typeof(string)).On("cmd").WithLoopback(),
-                        Register.DefaultRouting.PublishingCommands(typeof(string)).To("bc").With("default"))
+                        Register.DefaultRouting.PublishingCommands(typeof(string)).To("bc").With("cmd"))
                     )
                     .Register(Component.For<CommandSenderDependentComponent>())
                     .Register(Component.For<CommandsHandler>().AsCommandsHandler("bc"))
@@ -225,7 +225,7 @@ namespace Inceptum.Cqrs.Tests
                 component.CommandSender.SendCommand("test", "bc");
                 var commandsHandler = container.Resolve<CommandsHandler>();
                 Thread.Sleep(200);
-                Assert.That(commandsHandler.HandledCommands, Is.EqualTo(new[] { "test" }), "Command was not dispatched");
+                Assert.That(commandsHandler.HandledCommands.Select(o => o.ToString()).ToArray, Is.EqualTo(new[] { "test" }), "Command was not dispatched");
             }
         }
 
