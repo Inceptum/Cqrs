@@ -9,6 +9,15 @@ namespace Inceptum.Cqrs
         public string Name { get; protected set; }
     }
 
+    internal class FactoryParameter<T> : OptionalParameter
+    {
+        public FactoryParameter(Func<T> func)
+        {
+            Value = func;
+            Type = typeof(T); 
+        }
+    }
+
     internal class OptionalParameter<T> : OptionalParameter
     {
         public OptionalParameter(string name,T value)

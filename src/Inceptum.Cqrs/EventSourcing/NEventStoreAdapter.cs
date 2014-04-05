@@ -13,14 +13,21 @@ namespace Inceptum.Cqrs.EventSourcing
     public class NEventStoreAdapter : IEventStoreAdapter
     {
         private readonly IStoreEvents m_StoreEvents;
+        private readonly IConstructAggregates m_AggregateFactory;
 
         public NEventStoreAdapter(IStoreEvents storeEvents, IConstructAggregates aggregateFactory = null)
         {
+            if (storeEvents == null) throw new ArgumentNullException("storeEvents");
             m_StoreEvents = storeEvents;
-            Repository = new EventStoreRepository(storeEvents, aggregateFactory ?? new AggregateFactory(), new ConflictDetector());
+            m_AggregateFactory = aggregateFactory;
         }
 
-        public IRepository Repository { get; private set; }
+        public Func<IRepository> Repository {
+            get
+            {
+                return () => new EventStoreRepository(m_StoreEvents, m_AggregateFactory ?? new AggregateFactory(), new ConflictDetector());
+            }
+        }
         public IEnumerable<object> GetEventsFrom(DateTime @from, params Type[] types)
         {
             return m_StoreEvents.Advanced.GetFrom(@from).SelectMany(c => c.Events).Where(e => types.Length==0 || types.Contains(e.Body.GetType())).Select(message => message.Body);

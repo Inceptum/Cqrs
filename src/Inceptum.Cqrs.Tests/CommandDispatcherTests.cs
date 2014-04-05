@@ -43,6 +43,44 @@ namespace Inceptum.Cqrs.Tests
         }
 
         [Test]
+        public void WireWithOptionalParameterTest()
+        {
+            var dispatcher = new CommandDispatcher("testBC");
+            var handler = new RepoHandler();
+            var int64Repo = new Int64Repo();
+
+            dispatcher.Wire(handler, new[] { new OptionalParameter<IInt64Repo>(int64Repo) });
+            dispatcher.Dispatch((Int64)1, (delay, acknowledge) => { }, new Endpoint(), "route");
+
+            Assert.That(handler.HandledCommands, Is.EquivalentTo(new object[] { (Int64)1 }), "Some commands were not dispatched");
+            Assert.IsFalse(int64Repo.IsDisposed, "Optional parameter should NOT be disposed");
+        }
+        
+        [Test]
+        public void WireWithFactoryOptionalParameterTest()
+        {
+            var dispatcher = new CommandDispatcher("testBC");
+            var handler = new RepoHandler();
+            var int64Repo = new Int64Repo();
+            dispatcher.Wire(handler, new[] {new FactoryParameter<IInt64Repo>(()=>int64Repo)});
+            dispatcher.Dispatch((Int64)1, (delay, acknowledge) => { }, new Endpoint(), "route");
+            
+            Assert.That(handler.HandledCommands, Is.EquivalentTo(new object[] { (Int64)1 }), "Some commands were not dispatched");
+            Assert.IsTrue(int64Repo.IsDisposed, "Factory parameter should be disposed");
+        }
+
+        [Test]
+        public void WireWithFactoryOptionalParameterNullTest()
+        {
+            var dispatcher = new CommandDispatcher("testBC");
+            var handler = new RepoHandler();
+            dispatcher.Wire(handler, new[] { new FactoryParameter<IInt64Repo>(() => null) });
+            dispatcher.Dispatch((Int64)1, (delay, acknowledge) => { }, new Endpoint(), "route");
+
+            Assert.That(handler.HandledCommands, Is.EquivalentTo(new object[] { (Int64)1 }), "Some commands were not dispatched");
+        }
+
+        [Test]
         [ExpectedException(ExpectedException = typeof(InvalidOperationException), ExpectedMessage = "Only one handler per command is allowed. Command System.String handler is already registered in bound context testBC. Can not register Inceptum.Cqrs.Tests.Handler as handler for it")]
         public void MultipleHandlersAreNotAllowedDispatchTest()
         {
@@ -83,6 +121,30 @@ namespace Inceptum.Cqrs.Tests
         }
     }
 
+    public interface IInt64Repo
+    {
+        
+    }
+
+    internal class Int64Repo : IInt64Repo, IDisposable
+    {
+        public void Dispose()
+        {
+            IsDisposed = true;
+        }
+
+        public bool IsDisposed { get; set; }
+    }
+
+    public class RepoHandler : Handler
+    {
+        public void Handle(Int64 command, IInt64Repo repo)
+        {
+            HandledCommands.Add(command);
+        }
+    }
+
+
     public class Handler
     {
         public readonly List<object> HandledCommands = new List<object>();
@@ -95,7 +157,6 @@ namespace Inceptum.Cqrs.Tests
         public void Handle(int command)
         {
             HandledCommands.Add(command);
-
         }
 
         public void Handle(DateTime command)

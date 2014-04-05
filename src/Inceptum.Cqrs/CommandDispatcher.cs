@@ -64,14 +64,23 @@ namespace Inceptum.Cqrs
 
         }
 
+        private Expression invokeFunc(object o)
+        {
+            return Expression.Call(Expression.Constant(o), o.GetType().GetMethod("Invoke"));
+        }
+
+        private bool isFunc(Type type)
+        {
+            return (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Func<>));
+        }
+
         private void registerHandler(Type commandType, object o, Dictionary<ParameterInfo, object> optionalParameters, bool returnsResult)
         {
-            bool isRoutedCommandHandler = commandType.IsGenericType && commandType.GetGenericTypeDefinition() == typeof (RoutedCommand<>);
+            var isRoutedCommandHandler = commandType.IsGenericType && commandType.GetGenericTypeDefinition() == typeof (RoutedCommand<>);
             Type handledType;
             var command = Expression.Parameter(typeof(object), "command");
             var endpoint = Expression.Parameter(typeof(Endpoint), "endpoint");
             var route = Expression.Parameter(typeof(string), "route");
-
 
             Expression commandParameter;
             
@@ -87,11 +96,36 @@ namespace Inceptum.Cqrs
                 commandParameter = Expression.New(ctor, Expression.Convert(command, handledType), endpoint, route);
             }
 
-                           
-            Expression[] parameters =new [] {commandParameter}.Concat(
-                        optionalParameters.Select(p => Expression.Constant(p.Value, p.Key.ParameterType))).ToArray();
-            var call = Expression.Call(Expression.Constant(o), "Handle", null, parameters);
+            // prepare variables expressions
+            var variables = optionalParameters
+                 .Where(p => p.Value != null)
+                 .Where(p => isFunc(p.Value.GetType()))
+                 .ToDictionary(p => p.Key.Name, p => Expression.Variable(p.Key.ParameterType, p.Key.Name));
 
+            //prepare parameters expression to make handle call
+            var parameters = new[] { commandParameter }
+                 .Concat(optionalParameters.Select(p => 
+                     variables.ContainsKey(p.Key.Name)
+                     ? (Expression)variables[p.Key.Name]
+                     : (Expression)Expression.Constant(p.Value, p.Key.ParameterType))).ToArray();
+
+            var disposableType = typeof (IDisposable);
+            var call = Expression.Block(
+                 variables.Values.AsEnumerable(), //declare variables to populate from func factoreis
+                 variables
+                     .Select(p => Expression.Assign(p.Value, invokeFunc(optionalParameters.Single(x => x.Key.Name == p.Key).Value))) // invoke func and assign result to variable
+                     .Cast<Expression>()
+                     .Concat(new[] {
+                        Expression.TryFinally(
+                            Expression.Call(Expression.Constant(o), "Handle", null, parameters),
+                            Expression.Block(variables.Select( //dispose variable if disposable and not null
+                                v => Expression.IfThen(
+                                        Expression.And(Expression.NotEqual(v.Value, Expression.Constant(null)), Expression.TypeIs(v.Value, disposableType)),
+                                        Expression.Call(Expression.Convert(v.Value, disposableType) , disposableType.GetMethod("Dispose"))
+                             ))
+                      .Cast<Expression>().DefaultIfEmpty(Expression.Empty())))
+                     })
+                 );
 
             Expression<Func<object, Endpoint, string, CommandHandlingResult>> lambda;
             if (returnsResult)

@@ -385,7 +385,7 @@ namespace Inceptum.Cqrs
             var context = m_Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
             if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found", boundedContext), "boundedContext");
-            return context.EventStore.Repository;
+            return context.EventStore.Repository();
         }
     }
 

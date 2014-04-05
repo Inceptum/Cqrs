@@ -206,9 +206,9 @@ namespace Inceptum.Cqrs.Configuration
             return new EventData(eventId, typeName, true, data, metadata);
         }
 
-        public IRepository Repository
+        public Func<IRepository>  Repository
         {
-            get { return this; }
+            get { return () => this; }
         }
 
         public IEnumerable<object> GetEventsFrom(DateTime @from, params Type[] types)

@@ -6,7 +6,7 @@ namespace Inceptum.Cqrs
 {
     public interface IEventStoreAdapter
     {
-        IRepository Repository { get; }
+        Func<IRepository> Repository { get; }
         IEnumerable<object> GetEventsFrom(DateTime @from, params Type[] types);
     }
 }
