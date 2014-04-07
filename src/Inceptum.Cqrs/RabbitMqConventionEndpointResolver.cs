@@ -13,8 +13,8 @@ namespace Inceptum.Cqrs
         private string m_SerializationFormat;
         private readonly string m_ExclusiveQueuePostfix;
         private readonly string m_EnvironmentPrefix;
-        private static string m_CommandsKeyword;
-        private static string m_EventsKeyword;
+        private readonly string m_CommandsKeyword;
+        private readonly string m_EventsKeyword;
 
         public RabbitMqConventionEndpointResolver(string transport, string serializationFormat, string exclusiveQueuePostfix = null, string environment = null, string commandsKeyword = null, string eventsKeyword=null)
         {
@@ -106,7 +106,7 @@ namespace Inceptum.Cqrs
 
         }
 
-        private static string getKewordByRoutType(RouteType routeType)
+        private string getKewordByRoutType(RouteType routeType)
         {
             string keyword = null;
             switch (routeType)
