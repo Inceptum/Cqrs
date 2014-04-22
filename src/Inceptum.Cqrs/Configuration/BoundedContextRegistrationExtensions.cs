@@ -4,7 +4,7 @@ using Inceptum.Cqrs.InfrastructureCommands;
 
 namespace Inceptum.Cqrs.Configuration
 {
-    public static class BoundedContextRegistrationExtensions
+	public static class BoundedContextRegistrationExtensions
     {
         public static PublishingCommandsDescriptor<IBoundedContextRegistration> WithLoopback(this ListeningCommandsDescriptor<IBoundedContextRegistration> descriptor, string route = null)
         {

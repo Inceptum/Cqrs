@@ -1,4 +1,5 @@
 using System;
+using Inceptum.Cqrs.Configuration.BoundedContext;
 
 namespace Inceptum.Cqrs.Configuration.Routing
 {

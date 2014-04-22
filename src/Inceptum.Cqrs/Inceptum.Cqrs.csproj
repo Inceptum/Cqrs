@@ -114,6 +114,7 @@
     <Compile Include="CommitDispatcher.cs" />
     <Compile Include="Castle\ComponentRegistrationExtensions.cs" />
     <Compile Include="Configuration\ContextRegistrationBase.cs" />
+    <Compile Include="Configuration\DefaultRoutingRegistrationExtentions.cs" />
     <Compile Include="Configuration\Routing\DefaultRoutingRegistration.cs" />
     <Compile Include="Configuration\Routing\IDefaultRoutingRegistration.cs" />
     <Compile Include="Configuration\Saga\ISagaRegistration.cs" />
