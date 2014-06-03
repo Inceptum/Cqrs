@@ -12,7 +12,7 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         public bool HasEventStore { get; set; }  
         public BoundedContextRegistration(string name):base(name)
         {
-            
+            FailedCommandRetryDelayInternal = 60000;
             AddDescriptor(new InfrastructureCommandsHandlerDescriptor());
         }
 
