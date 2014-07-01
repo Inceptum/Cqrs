@@ -126,6 +126,11 @@ namespace Inceptum.Cqrs
             m_CqrsEngine.ReplayEvents(Name, remoteBoundedContext, types);
         }
 
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Dispose()
         {
             CommandDispatcher.Dispose();

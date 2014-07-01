@@ -7,5 +7,6 @@ namespace Inceptum.Cqrs
     {
         void SendCommand<T>(T command, string remoteBoundedContext,uint  priority=0);
         void ReplayEvents(string remoteBoundedContext, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types);
     }
 }
