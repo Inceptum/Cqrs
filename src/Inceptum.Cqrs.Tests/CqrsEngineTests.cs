@@ -663,7 +663,7 @@ namespace Inceptum.Cqrs.Tests
 
                     Thread.Sleep(2000);
                     //engine.SendCommand(new ReplayEventsCommand { Destination = "events", From = DateTime.MinValue }, "local");
-                    engine.ReplayEvents("local", "local");
+                    engine.ReplayEvents("local", "local", DateTime.MinValue);
                     Thread.Sleep(2000);
                     Console.WriteLine("Disposing...");
                 }
@@ -708,7 +708,7 @@ namespace Inceptum.Cqrs.Tests
 
                     Thread.Sleep(2000);
                     //engine.SendCommand(new ReplayEventsCommand { Destination = "events", From = DateTime.MinValue }, "local");
-                    engine.ReplayEvents("projections", "local", types);
+                    engine.ReplayEvents("projections", "local", DateTime.MinValue, types);
                     Thread.Sleep(2000);
                     Console.WriteLine("Disposing...");
                 }

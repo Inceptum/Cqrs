@@ -316,7 +316,9 @@ namespace Inceptum.Cqrs
             return published;
         }
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types)
+      
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
         {
             var context = Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
                 if (context == null)
@@ -359,7 +361,7 @@ namespace Inceptum.Cqrs
                     0,
                     knownEventTypes));
             }
-            SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = DateTime.MinValue, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext,remoteBoundedContext);
+            SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = @from, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext,remoteBoundedContext);
         }
 
 
@@ -392,7 +394,7 @@ namespace Inceptum.Cqrs
     public interface ICqrsEngine
     {
         IRepository GetRepository(string boundedContext);
-        void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types);
         void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0);
     }
 }

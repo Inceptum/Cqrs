@@ -121,12 +121,12 @@ namespace Inceptum.Cqrs
             m_CqrsEngine.SendCommand(command, Name, remoteBoundedContext, priority);
         }
 
-        public void ReplayEvents(string remoteBoundedContext, params Type[] types)
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, params Type[] types)
         {
-            m_CqrsEngine.ReplayEvents(Name, remoteBoundedContext, types);
+            m_CqrsEngine.ReplayEvents(Name, remoteBoundedContext, @from, types);
         }
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
         {
             throw new NotImplementedException();
         }
