@@ -272,7 +272,7 @@ Process is a component responsible for background processes within bounded conte
 
 Class implementing process should implement *IProcess* interfase. CqrsEngine would call Start method passing hosting bounded context event publisher and command seneder as parameters. On CqrsEngine dispose is disposes all peocesses. 
 
-Sample process sending CommandA to itself with 1000ms interval:
+Sample process sending CommandA to hosting domain with 1000ms interval:
 
 ```cs
 
