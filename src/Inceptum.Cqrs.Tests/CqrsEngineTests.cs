@@ -526,38 +526,7 @@ namespace Inceptum.Cqrs.Tests
 */
 
 
-        [Test]
-        [Ignore]
-        public void InvestigationTest()
-        {
-            long count = 0;
-            var handled = new AutoResetEvent(false);
-            using (var engine = new MessagingEngine(
-                new TransportResolver(new Dictionary<string, TransportInfo>
-                    {
-                        {"tr", new TransportInfo("localhost", "guest", "guest", "None",messaging:"RabbitMq")}
-                    }),new RabbitMqTransportFactory()))
-            {
-                var eventStoreConnection = EventStoreConnection.Create(ConnectionSettings.Create().UseConsoleLogger().SetDefaultUserCredentials(new UserCredentials("admin", "changeit")),
-                                                                       new IPEndPoint(IPAddress.Loopback, 1113));
-                eventStoreConnection.Connect();
-
-              
-                eventStoreConnection.SubscribeToAllFrom(Position.Start, false, (subscription, @event) =>
-                    {
-                        engine.Send(@event, new Endpoint("tr", "t1", true, "json"));
-                        handled.Set();
-                        count++;
-                    }, subscription => { });
-
-                handled.WaitOne();
-                var sw = Stopwatch.StartNew();
-                while (handled.WaitOne(100))
-                {
-                }
-                Console.WriteLine("Published {0} events. Within {1}ms", count, sw.ElapsedMilliseconds);
-            }
-        }
+       
 
         [Test]
         [Ignore]
