@@ -9,6 +9,7 @@ Incptum.Cqrs simplefies implementation of cqrs approuach in software developemen
 Incptum.Cqrs relayes on the following packages
 
 * Inceptum.Messaging - transport abstraction
+* NEventStore - event sourcing
 * CommonDomain - CQRS aware domain model
 
 
