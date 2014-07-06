@@ -6,7 +6,7 @@ Incptum.Cqrs simplefies implementation of cqrs approuach in software developemen
 * processing prioritization 
      
 
-Incptum.Cqrs relayes on the following packages
+Incptum.Cqrs depends on the following packages
 
 * Inceptum.Messaging - transport abstraction
 * NEventStore - event sourcing
