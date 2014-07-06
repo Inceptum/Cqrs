@@ -486,7 +486,27 @@ namespace Inceptum.Cqrs.Tests
             messagingEngine.VerifyAllExpectations();
         }
 
- 
+        [Test]
+        public void ProcessTest()
+        {
+            var testProcess = new TestProcess();
+            var commandHandler = new CommandHandler();
+            using (  new InMemoryCqrsEngine(
+             Register.BoundedContext("local")
+                                .ListeningCommands(typeof(string)).On("commands1").WithLoopback()
+                                .PublishingEvents(typeof(int)).With("events").WithLoopback()
+                                .WithCommandsHandler(commandHandler)
+                                .WithProcess(testProcess)
+             ))
+            {
+                Assert.That(testProcess.Started.WaitOne(1000),Is.True,"process was not started");
+                Thread.Sleep(1000);
+                Console.WriteLine("Disposing...");
+            }
+            Assert.That(testProcess.Disposed.WaitOne(1000), Is.True, "process was not disposed on engine dispose");
+            Assert.That(commandHandler.AcceptedCommands.Count, Is.GreaterThan(0), "commands sent by process were not processed");
+            Console.WriteLine("Dispose completed.");
+        }
 
  
 /*
@@ -691,14 +711,75 @@ namespace Inceptum.Cqrs.Tests
 
     public class TestProcess:IProcess
     {
+        public   ManualResetEvent Started=new ManualResetEvent(false);
+        public   ManualResetEvent Disposed=new ManualResetEvent(false);
+        Thread workerThread;
+        private ICommandSender m_CommandSender;
+
+        public TestProcess()
+        {
+            workerThread = new Thread(sendCommands);
+        }
+
+        private void sendCommands(object obj)
+        {
+
+            int i = 0;
+            do
+            {
+                m_CommandSender.SendCommand("command #" + i++, "local");
+            } while (!Disposed.WaitOne(100));
+ 
+        }
+
         public void Start(ICommandSender commandSender, IEventPublisher eventPublisher)
         {
+            m_CommandSender = commandSender;
+            workerThread.Start();
             Console.WriteLine("Test process started");
+            Started.Set();
         }
+
+
 
         public void Dispose()
         {
             Console.WriteLine("Test process disposed");
+            Disposed.Set();
+        }
+    }   
+    
+    public class TestProcess1:IProcess
+    {
+        private readonly ManualResetEvent m_Disposed=new ManualResetEvent(false);
+        readonly Thread m_WorkerThread;
+        private ICommandSender m_CommandSender;
+
+        public TestProcess1()
+        {
+            m_WorkerThread = new Thread(sendCommands);
+        }
+
+        private void sendCommands(object obj)
+        {
+
+            int i = 0;
+            while (!m_Disposed.WaitOne(100))
+            {
+                m_CommandSender.SendCommand("command #" + i++, "local");
+            }
+        }
+
+        public void Start(ICommandSender commandSender, IEventPublisher eventPublisher)
+        {
+            m_CommandSender = commandSender;
+            m_WorkerThread.Start();
+        }
+
+        public void Dispose()
+        {
+            m_Disposed.Set();
+            m_WorkerThread.Join();
         }
     }
 

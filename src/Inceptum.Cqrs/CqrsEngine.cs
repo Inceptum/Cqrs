@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Castle.Core.Internal;
 using CommonDomain.Persistence;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
@@ -115,10 +116,6 @@ namespace Inceptum.Cqrs
                 registration.Process(this);
             }
 
-            foreach (var boundedContext in Contexts)
-            {
-                boundedContext.Processes.ForEach(p => p.Start(boundedContext, boundedContext.EventsPublisher));
-            }
 
 
             ensureEndpoints();
@@ -184,6 +181,12 @@ namespace Inceptum.Cqrs
                     }
                 }
             }
+
+            foreach (var boundedContext in Contexts)
+            {
+                boundedContext.Processes.ForEach(p => p.Start(boundedContext, boundedContext.EventsPublisher));
+            }
+
         }
 
         private void ensureEndpoints()
@@ -267,20 +270,8 @@ namespace Inceptum.Cqrs
         {
             if (disposing)
             {
-                foreach (var boundedContext in Contexts.Where(b => b != null))
-                {
-
-                    if (boundedContext.Processes != null)
-                    {
-                        foreach (var process in boundedContext.Processes)
-                        {
-                            process.Dispose();
-                        }
-                    }
-
-                    boundedContext.Dispose();
-
-                }
+                Contexts.Where(b => b != null).Select(c=>c.Processes).Where(p=>p!=null).SelectMany(p=>p).ForEach(process => process.Dispose());
+                Contexts.Where(b => b != null).ForEach(context => context.Dispose());
 
                 if (m_Subscription != null)
                     m_Subscription.Dispose();
