@@ -38,12 +38,14 @@ CqrsEngine relies on Inceptum.Messaging, so preconfigured instance of IMessaging
 Route is a named message processing pipeline. It is used to resolve endpoint to be subscribed for particular message type or to be used to send message of given type. Route also defines processing group (consuming thread) with in which the message would be processed.
 
 
+```cs
 
 	Register.BoundedContext("bcA")
 				.PublishingEvents(typeof (EventA),typeof (EventB)).With("routeA"));
 				.ListeningCommands(typeof (CommandA),typeof (CommandB)).On("routeB"));
 				.ListeningEvents(typeof(EventC)).From("bcB").On("routeA")
 				.PublishingCommands(typeof(CommandC)).To("bcB").With("routeB")
+```
 
 the code above will register bounded context named 'bcA' that  
 
@@ -57,18 +59,26 @@ the code above will register bounded context named 'bcA' that
 
 to receive own events or send commands to itself bounded context should define loopback routes:
 
+```cs
+
 	Register.BoundedContext("bcA")
 				.PublishingEvents(typeof (EventA),typeof (EventB)).With("routeA"))
 					.WithLoopback("selfEventsRoute")
 				.ListeningCommands(typeof (CommandA),typeof (CommandB)).On("routeB"))
 					.WithLoopback("selfCommandsRoute");
+```
+
 If loopback route name is not provided (it is an optional parameter), the publishing route name would be used
+
+```cs
 
 	Register.BoundedContext("bcA")
 				.PublishingEvents(typeof (EventA),typeof (EventB)).With("routeA"))
 					.WithLoopback() //same as .WithLoopback("routeA") 
 				.ListeningCommands(typeof (CommandA),typeof (CommandB)).On("routeB"))
 					.WithLoopback();//same as .WithLoopback("routeB")
+
+```
 
 #### Default routing ####
 
@@ -80,36 +90,53 @@ route name is used to resolve endpoint when sending or subscribing for message. 
 
 globally:
 
+```cs
+
     var engine = new CqrsEngine(messagingEngine, 
 									Register.BoundedContext("bc"),
 									Register.DefaultEndpointResolver(new RabbitMqConventionEndpointResolver("rmq", "json"));
+```
 
 for particular route	
+
+```cs
 
 	Register.BoundedContext("bc")
 				.ListeningCommands(typeof(CommandA))
 					.On("routeA")
 					.WithEndpointResolver(new InMemoryEndpointResolver())
 
+```
 
 #### Multithreaded processing and prioritization ####
 
 By default messages within single route are processed on a single thread. It may be configured to put incomming messages in a queue an dprocess it with a number of worker threads:
+
+```cs
 
 	Register.BoundedContext("bc")
 		.ListeningCommands(typeof(CommandA)).On("routeA")
 		.ListeningCommands(typeof(CommandB)).On("routeA")
 		.ProcessingOptions("routeA").MultiThreaded(10).QueueCapacity(1024)
 
+```
+
+
 Prioritization may be defined only for multithreaded routes:
+
+```cs
 
 	Register.BoundedContext("bc")
 		.ListeningCommands(typeof(CommandA)).On("prioritizedCommandsRoute")
 			.Prioritized(lowestPriority: 2) 
 		.ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10).QueueCapacity(1024)
 
+```
+
 
 Sender may define priority from 0 to lowestPriority (less value for higher priority) and worker threads would take messages with higher priority. It is recommended to combine prioritization with custom **IEndpointResolver**  implementation resolving different endpoints (queues) for different priority values or define endpoint for each priority explicitly:
+
+```cs
 
 	Register.BoundedContext("bc")
 		.ListeningCommands(typeof(CommandA)).On("prioritizedCommandsRoute")
@@ -119,13 +146,14 @@ Sender may define priority from 0 to lowestPriority (less value for higher prior
 				.WithEndpoint("low").For(key=>key.Priority==2)
 		.ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10).QueueCapacity(1024)
 
-
-
+```
 
 
 ## Event sourcing ##
 
 CqrsEngine wraps [NEventStore](http://neventstore.org/ "NEventStore") as write model:
+
+```
 
 	Register.BoundedContext("local").WithNEventStore(dispatchCommits => Wireup.Init()
 			.UsingInMemoryPersistence()
@@ -133,11 +161,14 @@ CqrsEngine wraps [NEventStore](http://neventstore.org/ "NEventStore") as write m
 			.UsingJsonSerialization()
 			.UsingSynchronousDispatchScheduler()
 			.DispatchTo(dispatchCommits))
+```
 
 Apply to NEventSTore documentation for more details on NEventStore behaviour.
 
 Bounded context with NEventStore configured injects [CommonDomain](https://github.com/NEventStore/CommonDomain "CommonDomain") IRepository to it's hosted components (see command handlers and processes sections below ).  
 	
+```cs
+
 	namespace CommonDomain.Persistence
 	{
 	  public interface IRepository
@@ -150,7 +181,7 @@ Bounded context with NEventStore configured injects [CommonDomain](https://githu
 	  }
 	}
 
-  
+```
 
 ## Bounded context hosted components ##
 
@@ -164,7 +195,7 @@ Optionally there may be parameters of types *IEventPublisher* (event publisher o
 
 Return type may be void (exception thrown from handler would cause redelivery of the command within 60 seconds delay) or *CommandHandlingResult* (it defines whether the command should be redelivered and with what delay)
 
-
+```cs
 
 	class CommandHandler{
 	    public void Handle(CommandA command, IEventPublisher eventPublisher, IRepository repository)
@@ -180,13 +211,19 @@ Return type may be void (exception thrown from handler would cause redelivery of
 	    }
 	}
 
+```
+
 registration:
 
    
+```cs
+
 	Register.BoundedContext("bc")
 		.ListeningCommands(typeof(CommandA),typeof(CommandB)).On("routeA")
 		.PublishingEvents(typeof(EventA),typeof(EventB)).With("routeB")
 		.WithCommandsHandler(new CommandHandler()))
+
+```
 
 ### Projections ###
 
@@ -199,6 +236,7 @@ Optionally there may be parameter of type string named boundedContext. If it is 
 
 Return type may be void (exception thrown from handler would cause redelivery of the event within 60 seconds delay) or *CommandHandlingResult* (it defines whether the event should be redelivered and with what delay)
 
+```cs
 
 	class Projection
     {
@@ -215,14 +253,18 @@ Return type may be void (exception thrown from handler would cause redelivery of
 
 	}
 
+```
+
 registration:
 
+```cs
    
 	Register.BoundedContext("bc")
 		.ListeningEvents(typeof(EventA)).From("bcA).On("routeA")
 		.ListeningEvents(typeof(EventB)).From("bcB).On("routeB")
 		.WithProjection(new Projection()))
 
+```
 
 ### Processes ###
 
@@ -231,6 +273,8 @@ Process is a component responsible for background processes within bounded conte
 Class implementing process should implement *IProcess* interfase. CqrsEngine would call Start method passing hosting bounded context event publisher and command seneder as parameters. On CqrsEngine dispose is disposes all peocesses. 
 
 Sample process sending CommandA to itself with 1000ms interval:
+
+```cs
 
     public class TestProcess:IProcess
     {
@@ -264,12 +308,18 @@ Sample process sending CommandA to itself with 1000ms interval:
         }
     }
 
+```
+
+
 registration
+
+```cs
 
 	Register.BoundedContext("bc")
 		.ListeningCommands(typeof(CommandA))).On("routeA").WithLoopback()
 		.WithProcess(new Projection()))
 
+```
 
 
 ## Sagas ##
@@ -278,11 +328,15 @@ Sagas routing is configured similar to bounded context. But saga can not listen 
 
 When registering a saga a type implementing it should be provided. 
 
+```cs
+
 
 	Register.Saga<TheSaga>("saga")
 		.PublishingCommands(typeof(CommandA),typeof(CommandB)).To("bcA").With("routeA")
 		.PublishingCommands(typeof(CommandA),typeof(CommandB)).To("bcB").With("routeB")
 		.ListeningEvents(typeof(EventA),typeof(EventB),).From("bc").On("routeC"),
+
+```
 
 
 Class implementing saga should define method named 'Handle' for each event type it handles.
@@ -293,6 +347,8 @@ Optionally there may be parameter of type string named boundedContext. If it is 
 Optionally there may be parameter of type *ICommandSender*. If it is defined, command sender would be injected.
 
 Return type may be void (exception thrown from handler would cause redelivery of the event within 60 seconds delay) or *CommandHandlingResult* (it defines whether the event should be redelivered and with what delay)
+
+```cs
 
 
     public class TheSaga
@@ -314,3 +370,5 @@ Return type may be void (exception thrown from handler would cause redelivery of
 			}
         }
 	}
+
+```
