@@ -17,6 +17,8 @@ Incptum.Cqrs relayes on the following packages
 
 CqrsEngine relies on Inceptum.Messaging, so preconfigured instance of IMessagingEngine should be provided to it via constructor.
 
+```cs
+
     var messagingEngine = 
                     new MessagingEngine(
                         new TransportResolver(new Dictionary<string, TransportInfo>
@@ -25,6 +27,7 @@ CqrsEngine relies on Inceptum.Messaging, so preconfigured instance of IMessaging
                             })))
 
 	var engine = new CqrsEngine(messagingEngine, Register.BoundedContext("bc"));
+```
 
 ## Routing ##
 
