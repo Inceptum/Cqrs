@@ -22,7 +22,7 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         }
     }
 
-    abstract class EventStoreDescriptorBase : IDescriptor<Context>
+    public abstract class EventStoreDescriptorBase : IDescriptor<Context>
     {
 
 
@@ -46,14 +46,23 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
     }
     class EventStoreDescriptor : EventStoreDescriptorBase
     {
-        private readonly IEventStoreAdapter m_EventStoreAdapter;
+        private IEventStoreAdapter m_EventStoreAdapter;
+        private Func<Context, IDependencyResolver, IEventStoreAdapter> m_EventStoreAdapterFactory;
+
         public EventStoreDescriptor(IEventStoreAdapter eventStoreAdapter)
         {
             m_EventStoreAdapter = eventStoreAdapter;
         }
 
+        public EventStoreDescriptor(Func<Context, IDependencyResolver, IEventStoreAdapter> eventStoreAdapterFactory)
+        {
+            m_EventStoreAdapterFactory = eventStoreAdapterFactory;
+        }
+
         protected override IEventStoreAdapter CreateEventStore(Context boundedContext, IDependencyResolver resolver)
         {
+            if (m_EventStoreAdapterFactory != null)
+                m_EventStoreAdapter = m_EventStoreAdapterFactory(boundedContext, resolver);
             return m_EventStoreAdapter;
         }
     }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using EventStore.ClientAPI;
 using Inceptum.Cqrs.Configuration.BoundedContext;
 using Inceptum.Cqrs.Configuration.Routing;
 using Inceptum.Cqrs.Configuration.Saga;
@@ -141,11 +140,6 @@ namespace Inceptum.Cqrs.Configuration
         public static IBoundedContextRegistration WithNEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
         {
             return wrapper.Registration.WithNEventStore(configureEventStore);
-        }
-
-        public static IBoundedContextRegistration WithGetEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, IEventStoreConnection eventStoreConnection)
-        {
-            return wrapper.Registration.WithGetEventStore(eventStoreConnection);
         }
 
 

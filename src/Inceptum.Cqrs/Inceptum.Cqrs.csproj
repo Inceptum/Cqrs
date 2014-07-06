@@ -44,9 +44,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\CommonDomain.1.6.0.3\lib\net40\CommonDomain.dll</HintPath>
     </Reference>
-    <Reference Include="EventStore.ClientAPI">
-      <HintPath>..\packages\EventStore.Client.2.0.2\lib\net40\EventStore.ClientAPI.dll</HintPath>
-    </Reference>
     <Reference Include="Inceptum.Messaging, Version=1.0.8.16, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Inceptum.Messaging.1.0.8.16\lib\net40\Inceptum.Messaging.dll</HintPath>
@@ -58,9 +55,9 @@
     <Reference Include="NEventStore.Serialization.Json">
       <HintPath>..\packages\NEventStore.Serialization.Json.4.1.0.10\lib\net40\NEventStore.Serialization.Json.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.5.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -127,9 +124,7 @@
     <Compile Include="Configuration\IRegistration.cs" />
     <Compile Include="CommandDispatcher.cs" />
     <Compile Include="Configuration\BoundedContext\CommandsHandlerDescriptor.cs" />
-    <Compile Include="Configuration\BoundedContext\GetEventStoreDescriptor.cs" />
     <Compile Include="Configuration\DescriptorWithDependencies.cs" />
-    <Compile Include="EventSourcing\GregYoungEventStoreRepository.cs" />
     <Compile Include="Configuration\BoundedContext\InfrastructureCommandsHandlerDescriptor.cs" />
     <Compile Include="Configuration\Routing\ListeningCommandsDescriptor.cs" />
     <Compile Include="Configuration\Routing\ListeningEventsDescriptor.cs" />

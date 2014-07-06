@@ -61,9 +61,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NEventStore.Serialization.Json.4.1.0.10\lib\net40\NEventStore.Serialization.Json.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.5.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -120,6 +120,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Inceptum.Cqrs.EventStore\Inceptum.Cqrs.EventStore.csproj">
+      <Project>{E5635040-349D-42D0-8A04-8910DAC2CA59}</Project>
+      <Name>Inceptum.Cqrs.EventStore</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Inceptum.Cqrs\Inceptum.Cqrs.csproj">
       <Project>{7cc821bb-5ec7-4170-ac45-236900d48514}</Project>
       <Name>Inceptum.Cqrs</Name>

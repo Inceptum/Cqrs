@@ -3,7 +3,7 @@ using Inceptum.Cqrs.Configuration;
 
 namespace Inceptum.Cqrs
 {
-    class EventsPublisher : IEventPublisher
+    public class EventsPublisher : IEventPublisher
     {
         private readonly CqrsEngine m_CqrsEngine;
         private readonly Context m_Context;

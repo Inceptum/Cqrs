@@ -8,7 +8,7 @@ using EventStore.ClientAPI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Inceptum.Cqrs.Configuration
+namespace Inceptum.Cqrs.EventStore
 {
     public class AggregateNotFoundException : Exception
     {
@@ -68,6 +68,7 @@ namespace Inceptum.Cqrs.Configuration
 
         static GetEventStoreAdapter()
         {
+
             m_SerializerSettings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None };
         }
 

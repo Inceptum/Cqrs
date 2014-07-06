@@ -102,7 +102,7 @@ namespace Inceptum.Cqrs
             Processes = new List<IProcess>();
         }
 
-        internal EventsPublisher EventsPublisher { get; private set; }
+        public EventsPublisher EventsPublisher { get; private set; }
         internal CommandDispatcher CommandDispatcher { get; private set; }
         internal EventDispatcher EventDispatcher { get; private set; }
         internal List<IProcess> Processes { get; private set; }

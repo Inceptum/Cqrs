@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using CommonDomain.Persistence;
+﻿using CommonDomain.Persistence;
 using EventStore.ClientAPI;
+using Inceptum.Cqrs.Configuration;
+using Inceptum.Cqrs.Configuration.BoundedContext;
 
-namespace Inceptum.Cqrs.Configuration.BoundedContext
+namespace Inceptum.Cqrs.EventStore
 {
     internal class GetEventStoreDescriptor : EventStoreDescriptorBase
     {

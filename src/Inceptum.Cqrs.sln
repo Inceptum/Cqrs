@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inceptum.Cqrs", "Inceptum.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inceptum.Cqrs.Tests", "Inceptum.Cqrs.Tests\Inceptum.Cqrs.Tests.csproj", "{5FA73068-B2C7-4C93-9595-CEF1EC3DDC8C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inceptum.Cqrs.EventStore", "Inceptum.Cqrs.EventStore\Inceptum.Cqrs.EventStore.csproj", "{E5635040-349D-42D0-8A04-8910DAC2CA59}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,6 +27,10 @@ Global
 		{5FA73068-B2C7-4C93-9595-CEF1EC3DDC8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5FA73068-B2C7-4C93-9595-CEF1EC3DDC8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5FA73068-B2C7-4C93-9595-CEF1EC3DDC8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5635040-349D-42D0-8A04-8910DAC2CA59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5635040-349D-42D0-8A04-8910DAC2CA59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5635040-349D-42D0-8A04-8910DAC2CA59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5635040-349D-42D0-8A04-8910DAC2CA59}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

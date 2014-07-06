@@ -1,5 +1,4 @@
 using System;
-using EventStore.ClientAPI;
 using Inceptum.Cqrs.Configuration.Routing;
 using NEventStore;
 using NEventStore.Dispatcher;
@@ -50,6 +49,13 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             return this;
         }
 
+       public IBoundedContextRegistration WithEventStore(Func<Context, IDependencyResolver, IEventStoreAdapter> eventStoreAdapterFactory)
+        {
+            HasEventStore = true;
+            AddDescriptor(new EventStoreDescriptor(eventStoreAdapterFactory));
+            return this;
+        }
+
        public IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
         {
             HasEventStore = true;
@@ -63,13 +69,16 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             AddDescriptor(new NEventStoreDescriptor(configureEventStore));
             return this;
         }
-
+/*
         public IBoundedContextRegistration WithGetEventStore(IEventStoreConnection eventStoreConnection)
         {
             HasEventStore = true;
             AddDescriptor(new GetEventStoreDescriptor(eventStoreConnection));
             return this;
-        }
+        }*/
+
+        
+
 
         public IBoundedContextRegistration FailedCommandRetryDelay(long delay)
         {

@@ -11,6 +11,7 @@ using CommonDomain.Persistence;
 using EventStore.ClientAPI;
 using EventStore.ClientAPI.SystemData;
 using Inceptum.Cqrs.Configuration;
+using Inceptum.Cqrs.EventStore;
 using Inceptum.Cqrs.Routing;
 using Inceptum.Messaging;
 using Inceptum.Messaging.Configuration;

@@ -1,5 +1,4 @@
 using System;
-using EventStore.ClientAPI;
 using Inceptum.Cqrs.Configuration.Routing;
 using NEventStore;
 using NEventStore.Dispatcher;
@@ -35,9 +34,9 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
 
         IBoundedContextRegistration WithEventStore<T>() where T : IEventStoreAdapter;
         IBoundedContextRegistration WithEventStore(IEventStoreAdapter eventStoreAdapter);
+        IBoundedContextRegistration WithEventStore(Func<Context, IDependencyResolver, IEventStoreAdapter> eventStoreAdapterFactory);
         IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore);
         IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore);
-        IBoundedContextRegistration WithGetEventStore(IEventStoreConnection eventStoreConnection);
 
         IBoundedContextRegistration WithProcess(object process);
         IBoundedContextRegistration WithProcess(Type process);
