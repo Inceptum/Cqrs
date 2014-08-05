@@ -1,10 +1,35 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
 using NUnit.Framework;
+using Rhino.Mocks;
 
 namespace Inceptum.Cqrs.Tests
 {
+    class ReplayedEventsListener
+    {
+        public   int cnt=0;
+        void Handle(int e)
+        {
+            Interlocked.Increment(ref cnt);
+        }
+        
+    }
+    public class ReplayingProcess : IProcess
+    {
+        public void Dispose()
+        {
+            
+        }
+
+        public void Start(ICommandSender commandSender, IEventPublisher eventPublisher)
+        {
+            commandSender.ReplayEvents("remote",DateTime.MinValue,typeof(int));
+        }
+    }
+
     [TestFixture]
     internal class ReplayEventsCommandTests
     {
@@ -23,6 +48,38 @@ namespace Inceptum.Cqrs.Tests
                 Assert.AreEqual(replayEventsCommand.SerializationFormat, actual.SerializationFormat);
                 CollectionAssert.AreEquivalent(replayEventsCommand.Types, actual.Types);
             }
+        } 
+        
+        
+        [Test]
+        public void ReplayWithinProcessTest()
+        {
+            var process = new ReplayingProcess();
+            var listener = new ReplayedEventsListener();
+            var es=MockRepository.GenerateMock<IEventStoreAdapter>();
+            es.Expect(x => x.GetEventsFrom(DateTime.MinValue, typeof (int))).Return(new object[] {10});
+            using (new InMemoryCqrsEngine(
+
+
+                     Register.BoundedContext("remote")
+                                .ListeningInfrastructureCommands().On("inf")
+                                .PublishingEvents(typeof(int)).With("events")
+                                .WithEventStore(es),
+
+                                             
+                     Register.BoundedContext("local")
+                                .PublishingCommands(typeof(ReplayEventsCommand)).To("remote").With("inf")
+                                .ListeningEvents(typeof(int)).From("remote").On("events")
+                                .WithProcess(process)
+                                .WithProjection(listener,"remote")
+
+                    
+             ))
+            {
+                Thread.Sleep(1000);
+                Console.WriteLine("Disposing...");
+            }
+            Assert.That(listener.cnt,Is.GreaterThan(0));
         }
     }
 }
