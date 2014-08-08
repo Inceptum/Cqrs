@@ -6,6 +6,7 @@ using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.Routing;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
+using NLog;
 
 namespace Inceptum.Cqrs
 {
@@ -86,12 +87,13 @@ namespace Inceptum.Cqrs
     public class Context : RouteMap, IDisposable, ICommandSender
     {
 
-   
+        readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
         private readonly CqrsEngine m_CqrsEngine;
         private readonly Dictionary<string, Destination> m_TempDestinations = new Dictionary<string, Destination>();
-
         internal Context(CqrsEngine cqrsEngine, string name, long failedCommandRetryDelay) : base(name)
         {
+
+
             if(name.ToLower()=="default")
                 throw new ArgumentException("default is reserved name","name");
             m_CqrsEngine = cqrsEngine;

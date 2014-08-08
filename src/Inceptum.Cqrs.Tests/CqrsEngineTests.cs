@@ -451,14 +451,16 @@ namespace Inceptum.Cqrs.Tests
             messagingEngine.Expect(e => e.Send(
                 Arg<object>.Is.Equal("testCommand"),
                 Arg<Endpoint>.Is.Anything,
-                Arg<string>.Is.Equal("cqrs.operations.remoteCommands")
+                Arg<string>.Is.Equal("cqrs.operations.remoteCommands"),
+                Arg<Dictionary<string,string>>.Is.Anything
                 ));
 
             //publish event from local BC
             messagingEngine.Expect(e => e.Send(
                 Arg<object>.Is.Equal(true),
                 Arg<Endpoint>.Is.Anything,
-                Arg<string>.Is.Equal("cqrs.operations.localEvents")
+                Arg<string>.Is.Equal("cqrs.operations.localEvents"),
+                Arg<Dictionary<string, string>>.Is.Anything
                 ));
 
 
@@ -696,10 +698,10 @@ namespace Inceptum.Cqrs.Tests
                     engine.SendCommand(guid + ":changeName:newName", "local", "local");
 
 
-                    Thread.Sleep(2000);
-                    //engine.SendCommand(new ReplayEventsCommand { Destination = "events", From = DateTime.MinValue }, "local");
-                    engine.ReplayEvents("projections", "local", DateTime.MinValue, types);
-                    Thread.Sleep(2000);
+                    ManualResetEvent replayFinished=new ManualResetEvent(false);
+                    engine.ReplayEvents("projections", "local", DateTime.MinValue,l => replayFinished.Set(), types);
+
+                    Assert.That(replayFinished.WaitOne(3000),Is.True,"Events were not replayed");
                     Console.WriteLine("Disposing...");
                 }
 

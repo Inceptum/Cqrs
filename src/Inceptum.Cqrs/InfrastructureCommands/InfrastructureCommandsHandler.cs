@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using CommonDomain.Persistence;
 using Inceptum.Cqrs.Configuration;
@@ -41,10 +42,20 @@ namespace Inceptum.Cqrs.InfrastructureCommands
 
             var eventsFrom = m_Context.EventStore.GetEventsFrom(routedCommand.Command.From,routedCommand.Command.Types);
             var processingGroupName = m_Context.First(r=>r.Name==routedCommand.OriginRoute).ProcessingGroupName;
+            long count = 0;
+            var headers = new Dictionary<string, string>() { { "CommandId", routedCommand.Command.Id.ToString() } };
             foreach (var @event in eventsFrom)
             {
-                m_CqrsEngine.PublishEvent(@event, endpoint, processingGroupName);
+                m_CqrsEngine.PublishEvent(@event, endpoint, processingGroupName,headers);
+                count++;
             }
+            m_CqrsEngine.PublishEvent(new ReplayFinishedEvent()
+            {
+                CommandId = routedCommand.Command.Id,
+                EventsCount = count,
+                Id = Guid.NewGuid()
+            }, endpoint, processingGroupName,headers);
+
         }
     }
 }

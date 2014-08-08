@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using Castle.Core.Internal;
 using CommonDomain.Persistence;
 using Inceptum.Cqrs.Configuration;
@@ -156,12 +157,12 @@ namespace Inceptum.Cqrs
                         switch (route.Type)
                         {
                             case RouteType.Events:
-                                callback = (@event, acknowledge) => context.EventDispatcher.Dispacth(remoteBoundedContext,@event, acknowledge);
+                                callback = (@event, acknowledge,headers) => context.EventDispatcher.Dispacth(remoteBoundedContext,@event, acknowledge);
                                 messageTypeName = "event";
                                 break;
                             case RouteType.Commands:
                                 callback =
-                                    (command, acknowledge) =>
+                                    (command, acknowledge, headers) =>
                                         context.CommandDispatcher.Dispatch(command, acknowledge, endpoint, routeName);
                                 messageTypeName = "command";
                                 break;
@@ -307,13 +308,21 @@ namespace Inceptum.Cqrs
             return published;
         }
 
-      
+
 
         public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
+        {
+            ReplayEvents(boundedContext,remoteBoundedContext,@from, l => { },types);    
+        }
+
+        
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from,Action<long> callback, params Type[] types)
         {
             var context = Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
                 if (context == null)
                 throw new ArgumentException(string.Format("bound context {0} not found",boundedContext),"boundedContext");
+
             var publishDirections = (from route in context.Routes
                                      from messageRoute in route.MessageRoutes
                                      where messageRoute.Key.MessageType == typeof(ReplayEventsCommand) && 
@@ -332,28 +341,34 @@ namespace Inceptum.Cqrs
             var direction = publishDirections.First();
             var ep = direction.endpoint;
             Destination tmpDestination;
-            if (context.GetTempDestination(ep.TransportId, () => m_MessagingEngine.CreateTemporaryDestination(ep.TransportId,"EventReplay"), out tmpDestination))
-            {
-                var replayEndpoint = new Endpoint { Destination = tmpDestination, SerializationFormat = ep.SerializationFormat, SharedDestination = true, TransportId = ep.TransportId };
 
+            if (context.GetTempDestination(ep.TransportId, () => m_MessagingEngine.CreateTemporaryDestination(ep.TransportId, "EventReplay"), out tmpDestination))
+            {
+
+                var replayEndpoint = new Endpoint { Destination = tmpDestination, SerializationFormat = ep.SerializationFormat, SharedDestination = true, TransportId = ep.TransportId };
                 var knownEventTypes = (from route in context.Routes
                                        from messageRoute in route.MessageRoutes
                                        where  
                                                messageRoute.Key.RouteType == RouteType.Events &&
                                                messageRoute.Key.RemoteBoundedContext == remoteBoundedContext
                                        select  messageRoute.Key.MessageType).ToArray();
-                
-                
+ 
                 m_Subscription.Add(m_MessagingEngine.Subscribe(
                     replayEndpoint,
-                    (@event, acknowledge) => context.EventDispatcher.Dispacth(remoteBoundedContext,@event, acknowledge),
+                    (@event, acknowledge, headers) => context.EventDispatcher.ProcessReplayedEvent(@event, acknowledge, remoteBoundedContext, headers),
                     (typeName, acknowledge) => { }, 
                     "EventReplay",
                     0,
-                    knownEventTypes));
+                    knownEventTypes.Concat(new []{typeof(ReplayFinishedEvent)}).Distinct().ToArray()));
             }
-            SendCommand(new ReplayEventsCommand { Destination = tmpDestination.Publish, From = @from, SerializationFormat = ep.SerializationFormat, Types = types }, boundedContext,remoteBoundedContext);
+
+            var replayEventsCommand = new ReplayEventsCommand { Id = Guid.NewGuid(), Destination = tmpDestination.Publish, From = @from, SerializationFormat = ep.SerializationFormat, Types = types };
+            context.EventDispatcher.RegisterReplay(replayEventsCommand.Id,callback);
+
+            SendCommand(replayEventsCommand, boundedContext,remoteBoundedContext);
         }
+
+     
 
 
         internal void PublishEvent(object @event, string boundedContext)
@@ -363,9 +378,9 @@ namespace Inceptum.Cqrs
                 throw new InvalidOperationException(string.Format("bound context '{0}' does not support event '{1}'", boundedContext, @event.GetType()));
         }
 
-        internal void PublishEvent(object @event, Endpoint endpoint, string processingGroup)
+        internal void PublishEvent(object @event, Endpoint endpoint, string processingGroup, Dictionary<string, string> headers = null)
         {
-            m_MessagingEngine.Send(@event, endpoint, processingGroup);
+            m_MessagingEngine.Send(@event, endpoint, processingGroup,headers);
         }
 
         internal IDependencyResolver DependencyResolver {
@@ -386,6 +401,7 @@ namespace Inceptum.Cqrs
     {
         IRepository GetRepository(string boundedContext);
         void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types);
         void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0);
     }
 }
