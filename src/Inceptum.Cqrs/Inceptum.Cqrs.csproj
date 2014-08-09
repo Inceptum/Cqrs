@@ -161,7 +161,6 @@
     <Compile Include="Utils\QueuedTaskScheduler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
     <None Include="Inceptum.Cqrs.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
