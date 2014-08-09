@@ -178,41 +178,58 @@ namespace Inceptum.Cqrs
         public void ProcessReplayedEvent(object @event, AcknowledgeDelegate acknowledge, string remoteBoundedContext,
           Dictionary<string, string> headers)
         {
-            var commandId = Guid.Parse(headers["CommandId"]);
-            var replay = findReplay(commandId);
+            Replay replay=null;
 
-            var replayFinishedEvent = @event as ReplayFinishedEvent;
-            if (replayFinishedEvent != null)
+            if (headers.ContainsKey("CommandId"))
             {
+                var commandId = Guid.Parse(headers["CommandId"]);
+                replay = findReplay(commandId);
+            }
+            else
+            {
+                m_Logger.Warn("Bounded context '{0}' uses obsolete Inceptum.Cqrs version. Callback would be never invoked.",remoteBoundedContext);
+            }
+ 
+            var replayFinishedEvent = @event as ReplayFinishedEvent;
+            if (replayFinishedEvent != null )
+            {
+                if (replay == null)
+                {
+                    acknowledge(0, true);
+                    return;
+                }
 
                 lock (replay)
                 {
                     replay.FinishedEvent = replayFinishedEvent;
                     replay.FinishedEventAcknowledge = acknowledge;
                 }
+                
                 if (!replay.ReportReplayFinishedIfRequired(m_Logger))
                     return;
+
                 lock (m_Replays)
                 {
-                    m_Replays.Remove(commandId);
+                    m_Replays.Remove(replay.Id);
                 }
+                return;
             }
-            else
+
+            Dispacth(remoteBoundedContext, @event, (delay, doAcknowledge) =>
             {
-                Dispacth(remoteBoundedContext, @event, (delay, doAcknowledge) =>
+                acknowledge(delay, doAcknowledge);
+                if (replay != null)
                 {
-                    acknowledge(delay, doAcknowledge);
                     if (doAcknowledge)
                         replay.Increment();
                     if (!replay.ReportReplayFinishedIfRequired(m_Logger))
                         return;
                     lock (m_Replays)
                     {
-                        m_Replays.Remove(commandId);
+                        m_Replays.Remove(replay.Id);
                     }
-                });
-            }
-
+                }
+            });
         }
 
         private Replay findReplay(Guid replayId)
