@@ -44,9 +44,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\CommonDomain.1.6.0.3\lib\net40\CommonDomain.dll</HintPath>
     </Reference>
-    <Reference Include="Inceptum.Messaging, Version=2.0.0.2, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Inceptum.Messaging, Version=2.0.0.5, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Inceptum.Messaging.2.0.0.2\lib\net40\Inceptum.Messaging.dll</HintPath>
+      <HintPath>..\packages\Inceptum.Messaging.2.0.0.5\lib\net40\Inceptum.Messaging.dll</HintPath>
     </Reference>
     <Reference Include="NEventStore, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -161,6 +161,7 @@
     <Compile Include="Utils\QueuedTaskScheduler.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="Inceptum.Cqrs.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
