@@ -128,7 +128,17 @@ namespace Inceptum.Cqrs
             m_CqrsEngine.ReplayEvents(Name, remoteBoundedContext, @from, types);
         }
 
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
+        {
+            m_CqrsEngine.ReplayEvents(Name, remoteBoundedContext, @from, callback, types);
+        }
+
         public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
         {
             throw new NotImplementedException();
         }
