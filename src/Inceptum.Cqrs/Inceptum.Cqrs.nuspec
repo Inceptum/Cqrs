@@ -12,7 +12,7 @@
     <copyright>Copyright 2013</copyright>
     <tags></tags>
     <dependencies>
-      <dependency id="Inceptum.Messaging" version="[2.0.0,2.0.1)" />
+      <dependency id="Inceptum.Messaging" version="[2.0.0.2,2.0.1.0)" />
       <dependency id="NEventStore" version="[4.1.0.10, 5.0.0.0)" />
       <dependency id="NEventStore.Serialization.Json" version="[4.1.0.10, 5.0.0.0)" />
     </dependencies>
