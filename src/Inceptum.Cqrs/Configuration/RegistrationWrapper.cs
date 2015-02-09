@@ -132,18 +132,27 @@ namespace Inceptum.Cqrs.Configuration
             return wrapper.Registration.WithEventStore(eventStoreAdapter);
         }
 
+        [Obsolete]
         public static IBoundedContextRegistration WithNEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func<IDispatchCommits, Wireup> configureEventStore)
         {
             return wrapper.Registration.WithNEventStore(configureEventStore);
         }
 
+        [Obsolete]
         public static IBoundedContextRegistration WithNEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
         {
             return wrapper.Registration.WithNEventStore(configureEventStore);
         }
 
+        public static IBoundedContextRegistration WithNEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func< Wireup> configureEventStore)
+        {
+            return wrapper.Registration.WithNEventStore(configureEventStore);
+        }
 
-
+        public static IBoundedContextRegistration WithNEventStore(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Func<IConnectionFactory, Wireup> configureEventStore)
+        {
+            return wrapper.Registration.WithNEventStore(configureEventStore);
+        }
 
         public static IBoundedContextRegistration WithProjection(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, object projection, string fromBoundContext)
         {
