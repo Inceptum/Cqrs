@@ -35,8 +35,10 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         IBoundedContextRegistration WithEventStore<T>() where T : IEventStoreAdapter;
         IBoundedContextRegistration WithEventStore(IEventStoreAdapter eventStoreAdapter);
         IBoundedContextRegistration WithEventStore(Func<Context, IDependencyResolver, IEventStoreAdapter> eventStoreAdapterFactory);
-        IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore);
-        IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore);
+        [Obsolete] IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore);
+        [Obsolete] IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore);
+        IBoundedContextRegistration WithNEventStore(Func<Wireup> configureEventStore);
+        IBoundedContextRegistration WithNEventStore(Func<IConnectionFactory, Wireup> configureEventStore);
 
         IBoundedContextRegistration WithProcess(object process);
         IBoundedContextRegistration WithProcess(Type process);
