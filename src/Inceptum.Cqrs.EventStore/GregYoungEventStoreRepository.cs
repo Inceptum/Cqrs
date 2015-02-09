@@ -207,6 +207,11 @@ namespace Inceptum.Cqrs.EventStore
             return new EventData(eventId, typeName, true, data, metadata);
         }
 
+        public void Bootstrap()
+        {
+            
+        }
+
         public Func<IRepository>  Repository
         {
             get { return () => this; }

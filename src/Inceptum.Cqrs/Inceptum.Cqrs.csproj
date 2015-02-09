@@ -87,6 +87,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Rx-PlatformServices.2.2.2\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
     </Reference>
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -134,6 +135,9 @@
     <Compile Include="Configuration\Routing\PublishingEventsDescriptor.cs" />
     <Compile Include="Configuration\Routing\PublishingRouteDescriptor.cs" />
     <Compile Include="Configuration\Routing\RouteDescriptorBase.cs" />
+    <Compile Include="EventSourcing\DispatchSchedulerWireupExtensions.cs" />
+    <Compile Include="EventSourcing\DispatchScheduler.cs" />
+    <Compile Include="EventSourcing\DispatchSchedulerWireup.cs" />
     <Compile Include="EventSourcing\NEventStoreAdapter.cs" />
     <Compile Include="EventsPublisher.cs" />
     <Compile Include="Configuration\BoundedContext\EventStoreDescriptor.cs" />

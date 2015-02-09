@@ -36,7 +36,7 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             boundedContext.EventStore = CreateEventStore(boundedContext,resolver);
         }
 
-        public void Process(Context boundedContext, CqrsEngine cqrsEngine)
+        public virtual void Process(Context boundedContext, CqrsEngine cqrsEngine)
         {
             
         }
@@ -73,6 +73,12 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         private readonly Func<IDispatchCommits, IConnectionFactory, Wireup> m_ConfigureEventStore;
         private IConstructAggregates m_ConstructAggregates;
         private IConnectionFactory m_ConnectionFactory;
+        private Action m_SchedulerBootsraper;
+
+        public NEventStoreDescriptor(Func<IConnectionFactory, Wireup> configureEventStore)
+            : this((commits, factory) => configureEventStore(factory))
+        {
+        }
 
         public NEventStoreDescriptor(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
         {
@@ -90,8 +96,16 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
                 ? (IConnectionFactory)resolver.GetService(typeof(IConnectionFactory))
                 : new ConfigurationConnectionFactory(null);
 
-            IStoreEvents eventStore = m_ConfigureEventStore(new CommitDispatcher(boundedContext.EventsPublisher), m_ConnectionFactory).Build();
-            return new NEventStoreAdapter(eventStore, m_ConstructAggregates);
+            var configureEventStore = m_ConfigureEventStore(new CommitDispatcher(boundedContext.EventsPublisher), m_ConnectionFactory)
+                .UsingDispatchScheduler()
+                .DispatchTo(new CommitDispatcher(boundedContext.EventsPublisher));
+            m_SchedulerBootsraper = configureEventStore.GetDispatchScheduler();
+            IStoreEvents eventStore = configureEventStore.Build();
+            return new NEventStoreAdapter(eventStore, m_SchedulerBootsraper, m_ConstructAggregates);
+        }
+
+        public override void Process(Context boundedContext, CqrsEngine cqrsEngine)
+        {
         }
     }
 }

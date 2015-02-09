@@ -117,8 +117,6 @@ namespace Inceptum.Cqrs
                 registration.Process(this);
             }
 
-
-
             ensureEndpoints();
 
             foreach (var boundedContext in Contexts)
@@ -188,6 +186,10 @@ namespace Inceptum.Cqrs
                 boundedContext.Processes.ForEach(p => p.Start(boundedContext, boundedContext.EventsPublisher));
             }
 
+            foreach (var boundedContext in Contexts.Where(context => context.EventStore != null))
+            {
+                boundedContext.EventStore.Bootstrap();
+            }
         }
 
         private void ensureEndpoints()

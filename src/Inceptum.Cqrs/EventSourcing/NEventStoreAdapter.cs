@@ -13,13 +13,21 @@ namespace Inceptum.Cqrs.EventSourcing
     public class NEventStoreAdapter : IEventStoreAdapter
     {
         private readonly IStoreEvents m_StoreEvents;
+        private readonly Action m_Bootstrap;
         private readonly IConstructAggregates m_AggregateFactory;
 
-        public NEventStoreAdapter(IStoreEvents storeEvents, IConstructAggregates aggregateFactory = null)
+        public NEventStoreAdapter(IStoreEvents storeEvents, Action bootstrap = null, IConstructAggregates aggregateFactory = null)
         {
             if (storeEvents == null) throw new ArgumentNullException("storeEvents");
             m_StoreEvents = storeEvents;
+            m_Bootstrap = bootstrap;
             m_AggregateFactory = aggregateFactory;
+        }
+
+        public void Bootstrap()
+        {
+            if(m_Bootstrap != null)
+                m_Bootstrap();
         }
 
         public Func<IRepository> Repository {

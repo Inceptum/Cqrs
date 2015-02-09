@@ -56,19 +56,36 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             return this;
         }
 
-       public IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
+        [Obsolete]
+        public IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, Wireup> configureEventStore)
         {
             HasEventStore = true;
             AddDescriptor(new NEventStoreDescriptor((commits, factory) => configureEventStore(commits)));
             return this;
         }
 
+        [Obsolete]
         public IBoundedContextRegistration WithNEventStore(Func<IDispatchCommits, IConnectionFactory, Wireup> configureEventStore)
         {
             HasEventStore = true;
             AddDescriptor(new NEventStoreDescriptor(configureEventStore));
             return this;
         }
+         
+        public IBoundedContextRegistration WithNEventStore(Func< Wireup> configureEventStore)
+        {
+            HasEventStore = true;
+            AddDescriptor(new NEventStoreDescriptor((factory) => configureEventStore()));
+            return this;
+        }
+
+        public IBoundedContextRegistration WithNEventStore(Func<IConnectionFactory, Wireup> configureEventStore)
+        {
+            HasEventStore = true;
+            AddDescriptor(new NEventStoreDescriptor(configureEventStore));
+            return this;
+        }
+
 /*
         public IBoundedContextRegistration WithGetEventStore(IEventStoreConnection eventStoreConnection)
         {
