@@ -14,7 +14,6 @@ namespace Inceptum.Cqrs.EventSourcing
 
         private readonly IDispatchCommits m_Dispatcher;
         private readonly IPersistStreams m_Persistence;
-        private const int BOUNDED_CAPACITY = 1024;
         private readonly BlockingCollection<Commit> m_Queue;
         private Task m_Worker;
         private bool m_Disposed;
@@ -23,7 +22,7 @@ namespace Inceptum.Cqrs.EventSourcing
         {
             m_Dispatcher = dispatcher;
             m_Persistence = persistence;
-            m_Queue = new BlockingCollection<Commit>(new ConcurrentQueue<Commit>(), BOUNDED_CAPACITY);
+            m_Queue = new BlockingCollection<Commit>(new ConcurrentQueue<Commit>());
             
         }
 
