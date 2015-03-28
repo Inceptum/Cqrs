@@ -155,7 +155,7 @@ namespace Inceptum.Cqrs
                         switch (route.Type)
                         {
                             case RouteType.Events:
-                                callback = (@event, acknowledge,headers) => context.EventDispatcher.Dispacth(remoteBoundedContext,@event, acknowledge);
+                                callback = (@event, acknowledge,headers) => context.EventDispatcher.Dispatch(remoteBoundedContext, new[] {Tuple.Create(@event, acknowledge)});
                                 messageTypeName = "event";
                                 break;
                             case RouteType.Commands:
@@ -314,12 +314,22 @@ namespace Inceptum.Cqrs
 
         public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
         {
-            ReplayEvents(boundedContext,remoteBoundedContext,@from, l => { },types);    
+            ReplayEvents(boundedContext,remoteBoundedContext,@from, l => { } ,1,types);    
+        }
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
+        {
+            ReplayEvents(boundedContext, remoteBoundedContext, @from,   callback,1, types);    
+        }
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from,int batchSize, params Type[] types)
+        {
+            ReplayEvents(boundedContext,remoteBoundedContext,@from, l => { } ,batchSize,types);    
         }
 
         
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from,Action<long> callback, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from,Action<long> callback,int batchSize, params Type[] types)
         {
             var context = Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
                 if (context == null)
@@ -365,7 +375,7 @@ namespace Inceptum.Cqrs
             }
 
             var replayEventsCommand = new ReplayEventsCommand { Id = Guid.NewGuid(), Destination = tmpDestination.Publish, From = @from, SerializationFormat = ep.SerializationFormat, Types = types };
-            context.EventDispatcher.RegisterReplay(replayEventsCommand.Id,callback);
+            context.EventDispatcher.RegisterReplay(replayEventsCommand.Id,callback,batchSize);
 
             SendCommand(replayEventsCommand, boundedContext,remoteBoundedContext);
         }
@@ -404,6 +414,8 @@ namespace Inceptum.Cqrs
         IRepository GetRepository(string boundedContext);
         void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types);
         void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, int batchSize, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, int batchSize, params Type[] types);
         void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0);
     }
 }

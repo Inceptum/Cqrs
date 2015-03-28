@@ -169,7 +169,7 @@ namespace Inceptum.Cqrs.Tests
 
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
                 var eventListener = container.Resolve<EventListener>();
-                cqrsEngine.Contexts.First(c => c.Name == "local").EventDispatcher.Dispacth("remote", "test", (delay, acknowledge) => { });
+                cqrsEngine.Contexts.First(c => c.Name == "local").EventDispatcher.Dispatch("remote", "test", (delay, acknowledge) => { });
                 Assert.That(eventListener.EventsWithBoundedContext, Is.EquivalentTo(new[] { Tuple.Create("test", "remote") }), "Event was not dispatched");
                 Assert.That(eventListener.Events, Is.EquivalentTo(new[] { "test" }), "Event was not dispatched");
             }

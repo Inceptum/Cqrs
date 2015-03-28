@@ -140,22 +140,29 @@ namespace Inceptum.Cqrs.Tests
     class EventsListener
     {
         public List<object> Handled=new List<object>();
-        public void Handle(TestAggregateRootNameChangedEvent  e,string boundedContext)
+        public int NameChangedCalledCounter { get; set; }
+
+        public CommandHandlingResult[] Handle(TestAggregateRootNameChangedEvent[] events, string boundedContext)
         {
-            Handled.Add(e);
-            Console.WriteLine(boundedContext + ":" + e);
-        }
+            NameChangedCalledCounter++;
+            foreach (var e in events)
+            {
+                Handled.Add(e);
+                Console.WriteLine(boundedContext + ":" + e);
+            }
+            return events.Select(e => new CommandHandlingResult()).ToArray();
+        } 
         public void Handle(TestAggregateRootCreatedEvent e, string boundedContext)
         {
             Handled.Add(e);
             Console.WriteLine(boundedContext + ":" + e);
+
 
         }
 
         public void Handle(int e,string boundedContext)
         {
             Handled.Add(e);
-
             Console.WriteLine(boundedContext+":"+e);
         }  
     }
@@ -666,9 +673,8 @@ namespace Inceptum.Cqrs.Tests
 
         }
         [Test]
-     //   [Ignore("does not work on TC")]
-        [TestCase(new Type[0],2,TestName = "AllEvents")]
-        [TestCase(new []{typeof(TestAggregateRootNameChangedEvent)},1,TestName = "FilteredEvents")]
+        [TestCase(new Type[0],3,TestName = "AllEvents")]
+        [TestCase(new []{typeof(TestAggregateRootNameChangedEvent)},2,TestName = "FilteredEvents")]
         public void ReplayEventsTest(Type[] types,int expectedReplayCount)
         {
             var log = MockRepository.GenerateMock<ILog>();
@@ -696,16 +702,18 @@ namespace Inceptum.Cqrs.Tests
                     var guid = Guid.NewGuid();
                     engine.SendCommand(guid + ":create", "local", "local");
                     engine.SendCommand(guid + ":changeName:newName", "local", "local");
-
+                    engine.SendCommand(guid + ":changeName:newName", "local", "local");
+                     Thread.Sleep(1000);
 
                     ManualResetEvent replayFinished=new ManualResetEvent(false);
-                    engine.ReplayEvents("projections", "local", DateTime.MinValue,l => replayFinished.Set(), types);
+                    engine.ReplayEvents("projections", "local", DateTime.MinValue,l => replayFinished.Set(),10, types);
 
                     Assert.That(replayFinished.WaitOne(3000),Is.True,"Events were not replayed");
                     Console.WriteLine("Disposing...");
                 }
 
-            Assert.That(eventsListener.Handled.Count, Is.EqualTo(2+expectedReplayCount), "Wrong number of events was replayed");
+            Assert.That(eventsListener.Handled.Count, Is.EqualTo(3+expectedReplayCount), "Wrong number of events was replayed");
+            Assert.That(eventsListener.NameChangedCalledCounter, Is.EqualTo(3), "Events were not delivered in batches");
 
         }
  

@@ -114,6 +114,7 @@
     <Compile Include="CqrsFacilityTests.cs" />
     <Compile Include="EventDispatcherTests.cs" />
     <Compile Include="EventUpgradeWireupTests.cs" />
+    <Compile Include="InvestigationTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReplayEventsCommandTests.cs" />
   </ItemGroup>
