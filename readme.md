@@ -272,6 +272,7 @@ registration:
 	Register.BoundedContext("bc")
 		.ListeningEvents(typeof(EventA)).From("bcA).On("routeA")
 		.ListeningEvents(typeof(EventB)).From("bcB).On("routeB")
+		.ListeningEvents(typeof(EventC)).From("bcC).On("routeC")
 		.WithProjection(new Projection()))
 
 ```
