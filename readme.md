@@ -236,6 +236,8 @@ Optionally there may be parameter of type string named boundedContext. If it is 
 
 Return type may be void (exception thrown from handler would cause redelivery of the event within 60 seconds delay) or *CommandHandlingResult* (it defines whether the event should be redelivered and with what delay)
 
+Also it is possible to define handler able to process event batches. It should accept array of events and return *CommandHandlingResult[]* . It is usefull for replaying events. When ReplayEvent  is called with batchSize parameter it will callect events i batches and pass to handler (In some cases batch processing improves performance). Usual events (not replayed) will be passed to handler as array with single element. Batch handler should return array of *CommandHandlingResult*  one per each of accepted events, in the same order as events (first *CommandHandlingResult* is for fiirst event, second *CommandHandlingResult* is for second event etc)
+
 ```cs
 
 	class Projection
@@ -249,6 +251,14 @@ Return type may be void (exception thrown from handler would cause redelivery of
         {
             Console.WriteLine("Event B from boundedContext '{0}':{1}",boundedContext,  e);
 			return new CommandHandlingResult(){Retry = true,RetryDelay = 100};
+        }
+
+		public CommandHandlingResult[] Handle(EventC[]  events,string boundedContext)
+        {
+			foreach(e in events)
+                Console.WriteLine("Event C from boundedContext '{0}':{1}",boundedContext,  e);
+				
+			return events.Select(e=>new CommandHandlingResult(){Retry = true,RetryDelay = 100}).ToArray();
         }
 
 	}
