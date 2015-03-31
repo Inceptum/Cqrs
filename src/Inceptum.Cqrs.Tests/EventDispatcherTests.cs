@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Castle.Components.DictionaryAdapter;
 using Inceptum.Cqrs.Configuration;
+using Inceptum.Messaging.Contract;
 using NUnit.Framework;
 
 namespace Inceptum.Cqrs.Tests
@@ -16,13 +18,24 @@ namespace Inceptum.Cqrs.Tests
         }
 
         public readonly List<object> HandledEvents=new List<object>();
-        private readonly bool m_Fail;
+        private  bool m_Fail;
+
+        public bool Fail
+        {
+            get { return m_Fail; }
+            set { m_Fail = value; }
+        }
+
+        public bool FailOnce { get; set; }
 
         public void Handle(string e)
         {
             HandledEvents.Add(e);
-            if (m_Fail)
+            if (m_Fail || FailOnce)
+            {
+                FailOnce = false;
                 throw new Exception();
+            }
         }        
         
         
@@ -113,12 +126,21 @@ namespace Inceptum.Cqrs.Tests
         [Test]
         public void BatchDispatchTest()
         {
-            /*var dispatcher = new EventDispatcher("testBC");
-            var handler1 = new EventHandler();
-            dispatcher.Wire("testBC", handler1);
-            dispatcher.BatchDispatch("testBC", Enumerable.Range(1,10).Select(i=>(object)i), (delay, acknowledge) => { });
-            Assert.That(handler1.HandledEvents, Is.EquivalentTo(Enumerable.Range(1, 10)), "Events were not dispatched");
-            */
+            var dispatcher = new EventDispatcher("testBC");
+            var handler = new EventHandler();
+            dispatcher.Wire("testBC", handler);
+            Tuple<long, bool> result = null;
+            handler.FailOnce = true;
+            dispatcher.Dispatch("testBC",new []
+            {
+                Tuple.Create<object,AcknowledgeDelegate>("a", (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
+                Tuple.Create<object,AcknowledgeDelegate>("b", (delay, acknowledge) => { }),
+                Tuple.Create<object,AcknowledgeDelegate>("с", (delay, acknowledge) => { })
+            });
+
+            Assert.That(result, Is.Not.Null, "fail was not reported");
+            Assert.That(result.Item2, Is.False, "fail was not reported");
+            Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "not all events were handled (exception in first event handling prevented following events processing?)");
         }
     }
 }

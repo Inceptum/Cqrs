@@ -102,16 +102,34 @@ namespace Inceptum.Cqrs
             var result = Expression.Variable(typeof(List<CommandHandlingResult>), "result");
             var @event = Expression.Variable(typeof(object), "@event");
             var handleParams = new Expression[] { Expression.Convert(@event, eventType) }.Concat(optionalParameters.Select(p => Expression.Constant(p.Value))).ToArray();
-            var callHandler = Expression.Call(Expression.Constant(o), "Handle", null, handleParams);
+             var callHandler = Expression.Call(Expression.Constant(o), "Handle", null, handleParams);
+
+
+            var okResult = Expression.Constant(new CommandHandlingResult { Retry = false, RetryDelay = 0 });
+            var failResult = Expression.Constant(new CommandHandlingResult { Retry = true, RetryDelay = m_FailedEventRetryDelay });
             
-            Expression registerResult;
+            Expression registerResult  = Expression.TryCatch(
+                Expression.Block(
+                    typeof(void),
+                    returnsResult
+                        ?(Expression)Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), callHandler)
+                        :(Expression)Expression.Block(callHandler, Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), okResult))
+                    ),
+                Expression.Catch(
+                    typeof(Exception),
+                     Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), failResult)
+                    )
+                );
+            
+
+/*
+
             if (returnsResult)
                 registerResult = Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), callHandler);
             else
             {
-                var okResult = Expression.Constant(new CommandHandlingResult { Retry = false, RetryDelay = 0 });
                 registerResult = Expression.Block(callHandler, Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), okResult));
-            }
+            }*/
 
             var create = Expression.Block(
                new[] { result, @event },
