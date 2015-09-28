@@ -134,16 +134,16 @@ Prioritization may be defined only for multithreaded routes:
 ```
 
 
-Sender may define priority from 0 to lowestPriority (less value for higher priority) and worker threads would take messages with higher priority. It is recommended to combine prioritization with custom **IEndpointResolver**  implementation resolving different endpoints (queues) for different priority values or define endpoint for each priority explicitly:
+Sender may define priority from 1 to lowestPriority (less value for higher priority) and worker threads would take messages with higher priority. It is recommended to combine prioritization with custom **IEndpointResolver**  implementation resolving different endpoints (queues) for different priority values or define endpoint for each priority explicitly:
 
 ```cs
 
 	Register.BoundedContext("bc")
 		.ListeningCommands(typeof(CommandA)).On("prioritizedCommandsRoute")
-			.Prioritized(lowestPriority: 2) 
-				.WithEndpoint("high").For(key=>key.Priority==0)
-				.WithEndpoint("medium").For(key=>key.Priority==1)
-				.WithEndpoint("low").For(key=>key.Priority==2)
+			.Prioritized(lowestPriority: 3) 
+				.WithEndpoint("high").For(key=>key.Priority==1)
+				.WithEndpoint("medium").For(key=>key.Priority==2)
+				.WithEndpoint("low").For(key=>key.Priority==3)
 		.ProcessingOptions("prioritizedCommandsRoute").MultiThreaded(10).QueueCapacity(1024)
 
 ```
