@@ -10,6 +10,7 @@ namespace Inceptum.Cqrs
         void ReplayEvents(string remoteBoundedContext, DateTime @from, params Type[] types);
         void ReplayEvents(string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types);
         void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types);
         void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types);
         void ReplayEvents(string remoteBoundedContext, DateTime @from, int batchSize, params Type[] types);
         void ReplayEvents(string remoteBoundedContext, DateTime @from, Action<long> callback, int batchSize, params Type[] types);

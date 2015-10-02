@@ -247,6 +247,11 @@ namespace Inceptum.Cqrs.Castle
             CqrsEngine.ReplayEvents(boundedContext, remoteBoundedContext, @from, null, callback, types);
         }
 
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types)
+        {
+            CqrsEngine.ReplayEvents(boundedContext, remoteBoundedContext, @from, aggregateId, callback, types);
+        }
+
         public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, int batchSize, params Type[] types)
         {
             CqrsEngine.ReplayEvents(boundedContext, remoteBoundedContext, @from, null, callback, batchSize, types);
