@@ -45,7 +45,7 @@ namespace Inceptum.Cqrs.Castle
         private readonly string m_EngineComponetName = Guid.NewGuid().ToString();
         private readonly Dictionary<IHandler, Action<IHandler>> m_WaitList = new Dictionary<IHandler, Action<IHandler>>();
         private IRegistration[] m_BoundedContexts = new IRegistration[0];
-        private bool m_InMemory=false;
+        private bool m_InMemory = false;
         private static bool m_CreateMissingEndpoints = false;
         private ICqrsEngine m_CqrsEngine;
         public bool HasEventStore { get; set; }
@@ -84,7 +84,7 @@ namespace Inceptum.Cqrs.Castle
                 m_WaitList.Remove(pair.Key);
             }
         }
-      
+
 
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -121,32 +121,32 @@ namespace Inceptum.Cqrs.Castle
                 var registration = findBoundedContext(boundContext);
                 if (registration == null)
                     throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
-               
+
                 //TODO: decide which service to use
                 registration.WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext);
- 
+
             }
 
 
-           if (isCommandsHandler)
-           {
-               var commandsHandlerFor = (string)(handler.ComponentModel.ExtendedProperties["CommandsHandlerFor"]);
-               var registration = findBoundedContext(commandsHandlerFor);
-               if (registration == null)
-                   throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered",commandsHandlerFor)); 
-              
-               registration.WithCommandsHandler(handler.ComponentModel.Services.First());
- 
-           } 
+            if (isCommandsHandler)
+            {
+                var commandsHandlerFor = (string)(handler.ComponentModel.ExtendedProperties["CommandsHandlerFor"]);
+                var registration = findBoundedContext(commandsHandlerFor);
+                if (registration == null)
+                    throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", commandsHandlerFor));
+
+                registration.WithCommandsHandler(handler.ComponentModel.Services.First());
+
+            }
 
             if (isProcess)
             {
                 var processFor = (string)(handler.ComponentModel.ExtendedProperties["ProcessFor"]);
                 var registration = findBoundedContext(processFor);
-                
+
                 if (registration == null)
                     throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", processFor));
-               
+
                 registration.WithProcess(handler.ComponentModel.Services.First());
             }
         }
@@ -167,9 +167,9 @@ namespace Inceptum.Cqrs.Castle
             Kernel.Register(Component.For<IDependencyResolver>().ImplementedBy<CastleDependencyResolver>());
             Kernel.Resolver.AddSubResolver(this);
             Kernel.Register(engineReg.Named(m_EngineComponetName).DependsOn(new
-                {
-                    registrations = m_BoundedContexts.ToArray()
-                }));
+            {
+                registrations = m_BoundedContexts.ToArray()
+            }));
             Kernel.Register(
                   Component.For<ICommandSender>().ImplementedBy<CommandSender>().DependsOn(new { kernel = Kernel }));
 
@@ -178,7 +178,7 @@ namespace Inceptum.Cqrs.Castle
         public bool CanResolve(CreationContext context, ISubDependencyResolver contextHandlerResolver, ComponentModel model, DependencyModel dependency)
         {
             var dependsOnBoundedContextRepository = model.ExtendedProperties["dependsOnBoundedContextRepository"] as string;
-            return dependency.TargetType == typeof(IRepository) && dependsOnBoundedContextRepository != null  && m_BoundedContexts.Select(c=>c as BoundedContextRegistration).Where(c=>c!=null).Any(c => c.Name == dependsOnBoundedContextRepository && c.HasEventStore);
+            return dependency.TargetType == typeof(IRepository) && dependsOnBoundedContextRepository != null && m_BoundedContexts.Select(c => c as BoundedContextRegistration).Where(c => c != null).Any(c => c.Name == dependsOnBoundedContextRepository && c.HasEventStore);
         }
 
         public object Resolve(CreationContext context, ISubDependencyResolver contextHandlerResolver, ComponentModel model, DependencyModel dependency)
@@ -189,14 +189,14 @@ namespace Inceptum.Cqrs.Castle
     }
 
 
-    
+
 
     //TODO: should be injected by cqrs with preset local BC
-    class CommandSender:ICommandSender
+    class CommandSender : ICommandSender
     {
         private ICqrsEngine m_Engine;
         private IKernel m_Kernel;
-        private object m_SyncRoot=new object();
+        private object m_SyncRoot = new object();
 
         public CommandSender(IKernel kernel)
         {
@@ -205,7 +205,7 @@ namespace Inceptum.Cqrs.Castle
 
         private ICqrsEngine CqrsEngine
         {
-           get
+            get
             {
                 if (m_Engine == null)
                 {
@@ -225,51 +225,54 @@ namespace Inceptum.Cqrs.Castle
         {
         }
 
-        
-        
+
+
         public void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0)
         {
-            CqrsEngine.SendCommand(command, boundedContext,remoteBoundedContext, priority);
-        }
-
-      
-
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, params Type[] types)
-        {
-            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from, aggregateId, types);
-        }
-
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types)
-        {
-            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from, aggregateId, callback, types);
-        }
-
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, int batchSize, params Type[] types)
-        {
-            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from, aggregateId, callback,batchSize, types);
-        }
-
-        public void SendCommand<T>(T command, string remoteBoundedContext, uint priority = 0)
-        {
-            CqrsEngine.SendCommand(command,null,remoteBoundedContext,priority);
-        }
-
-        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, int batchSize, params Type[] types)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, int batchSize, params Type[] types)
-        {
-            throw new NotImplementedException();
+            CqrsEngine.SendCommand(command, boundedContext, remoteBoundedContext, priority);
         }
 
         public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, params Type[] types)
         {
+            CqrsEngine.ReplayEvents(remoteBoundedContext, remoteBoundedContext, @from, aggregateId, types);
+        }
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
+        {
+            CqrsEngine.ReplayEvents(boundedContext, remoteBoundedContext, @from, null, types);
+        }
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
+        {
+            CqrsEngine.ReplayEvents(boundedContext, remoteBoundedContext, @from, null, callback, types);
+        }
+
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, int batchSize, params Type[] types)
+        {
+            CqrsEngine.ReplayEvents(boundedContext, remoteBoundedContext, @from, null, callback, batchSize, types);
+        }
+
+        public void SendCommand<T>(T command, string remoteBoundedContext, uint priority = 0)
+        {
+            CqrsEngine.SendCommand(command, null, remoteBoundedContext, priority);
+        }
+
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, int batchSize, params Type[] types)
+        {
             throw new NotImplementedException();
         }
 
-        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types)
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Action<long> callback, int batchSize, params Type[] types)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, params Type[] types)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
         {
             throw new NotImplementedException();
         }

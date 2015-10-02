@@ -26,7 +26,7 @@ namespace Inceptum.Cqrs.Tests
 
         public void Start(ICommandSender commandSender, IEventPublisher eventPublisher)
         {
-            commandSender.ReplayEvents("remote",DateTime.MinValue, null, typeof(int));
+            commandSender.ReplayEvents("remote",DateTime.MinValue, typeof(int));
         }
     }
 
