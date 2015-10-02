@@ -662,7 +662,7 @@ namespace Inceptum.Cqrs.Tests
 
                     Thread.Sleep(2000);
                     //engine.SendCommand(new ReplayEventsCommand { Destination = "events", From = DateTime.MinValue }, "local");
-                    engine.ReplayEvents("local", "local", DateTime.MinValue);
+                    engine.ReplayEvents("local", "local", DateTime.MinValue, null);
                     Thread.Sleep(2000);
                     Console.WriteLine("Disposing...");
                 }
@@ -706,7 +706,7 @@ namespace Inceptum.Cqrs.Tests
                      Thread.Sleep(1000);
 
                     ManualResetEvent replayFinished=new ManualResetEvent(false);
-                    engine.ReplayEvents("projections", "local", DateTime.MinValue,l => replayFinished.Set(),10, types);
+                    engine.ReplayEvents("projections", "local", DateTime.MinValue, null, l => replayFinished.Set(),10, types);
 
                     Assert.That(replayFinished.WaitOne(3000),Is.True,"Events were not replayed");
                     Console.WriteLine("Disposing...");

@@ -217,7 +217,7 @@ namespace Inceptum.Cqrs.EventStore
             get { return () => this; }
         }
 
-        public IEnumerable<object> GetEventsFrom(DateTime @from, params Type[] types)
+        public IEnumerable<object> GetEventsFrom(DateTime @from, Guid? aggregateId, params Type[] types)
         {
             throw new NotImplementedException();
         }

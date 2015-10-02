@@ -40,7 +40,7 @@ namespace Inceptum.Cqrs.InfrastructureCommands
                 serialization = routedCommand.OriginEndpoint.SerializationFormat;
             var endpoint = new Endpoint(routedCommand.OriginEndpoint.TransportId, routedCommand.Command.Destination, true, serialization);
 
-            var eventsFrom = m_Context.EventStore.GetEventsFrom(routedCommand.Command.From,routedCommand.Command.Types);
+            var eventsFrom = m_Context.EventStore.GetEventsFrom(routedCommand.Command.From, routedCommand.Command.AggregateId, routedCommand.Command.Types);
             var processingGroupName = m_Context.First(r=>r.Name==routedCommand.OriginRoute).ProcessingGroupName;
             long count = 0;
             var headers = new Dictionary<string, string>() { { "CommandId", routedCommand.Command.Id.ToString() } };

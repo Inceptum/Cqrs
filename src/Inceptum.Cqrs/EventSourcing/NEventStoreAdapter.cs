@@ -36,9 +36,12 @@ namespace Inceptum.Cqrs.EventSourcing
                 return () => new EventStoreRepository(m_StoreEvents, m_AggregateFactory ?? new AggregateFactory(), new ConflictDetector());
             }
         }
-        public IEnumerable<object> GetEventsFrom(DateTime @from, params Type[] types)
+        public IEnumerable<object> GetEventsFrom(DateTime @from, Guid? aggregateId, params Type[] types)
         {
-            return m_StoreEvents.Advanced.GetFrom(@from).SelectMany(c => c.Events).Where(e => types.Length==0 || types.Contains(e.Body.GetType())).Select(message => message.Body);
+            return m_StoreEvents.Advanced.GetFrom(@from)
+                .Where(m => !aggregateId.HasValue || m.StreamId == aggregateId)
+                .SelectMany(c => c.Events)
+                .Where(e => types.Length==0 || types.Contains(e.Body.GetType())).Select(message => message.Body);
         }
 
 

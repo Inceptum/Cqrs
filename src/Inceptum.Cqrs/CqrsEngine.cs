@@ -312,24 +312,24 @@ namespace Inceptum.Cqrs
 
 
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, params Type[] types)
         {
-            ReplayEvents(boundedContext,remoteBoundedContext,@from, l => { } ,1,types);    
+            ReplayEvents(boundedContext,remoteBoundedContext,@from, aggregateId, l => { } ,1,types);    
         }
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types)
         {
-            ReplayEvents(boundedContext, remoteBoundedContext, @from,   callback,1, types);    
+            ReplayEvents(boundedContext, remoteBoundedContext, @from, aggregateId, callback,1, types);    
         }
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from,int batchSize, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, int batchSize, params Type[] types)
         {
-            ReplayEvents(boundedContext,remoteBoundedContext,@from, l => { } ,batchSize,types);    
+            ReplayEvents(boundedContext,remoteBoundedContext,@from, aggregateId, l => { } ,batchSize,types);    
         }
 
         
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from,Action<long> callback,int batchSize, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback,int batchSize, params Type[] types)
         {
             var context = Contexts.FirstOrDefault(bc => bc.Name == boundedContext);
                 if (context == null)
@@ -374,7 +374,7 @@ namespace Inceptum.Cqrs
                     knownEventTypes.Concat(new []{typeof(ReplayFinishedEvent)}).Distinct().ToArray()));
             }
 
-            var replayEventsCommand = new ReplayEventsCommand { Id = Guid.NewGuid(), Destination = tmpDestination.Publish, From = @from, SerializationFormat = ep.SerializationFormat, Types = types };
+            var replayEventsCommand = new ReplayEventsCommand { Id = Guid.NewGuid(), Destination = tmpDestination.Publish, From = @from, AggregateId = aggregateId, SerializationFormat = ep.SerializationFormat, Types = types };
             context.EventDispatcher.RegisterReplay(replayEventsCommand.Id,callback,batchSize);
 
             SendCommand(replayEventsCommand, boundedContext,remoteBoundedContext);
@@ -412,10 +412,10 @@ namespace Inceptum.Cqrs
     public interface ICqrsEngine
     {
         IRepository GetRepository(string boundedContext);
-        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types);
-        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types);
-        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, int batchSize, params Type[] types);
-        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, int batchSize, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, int batchSize, params Type[] types);
+        void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, int batchSize, params Type[] types);
         void SendCommand<T>(T command, string boundedContext, string remoteBoundedContext, uint priority = 0);
     }
 }

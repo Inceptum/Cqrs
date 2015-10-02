@@ -26,7 +26,7 @@ namespace Inceptum.Cqrs.Tests
 
         public void Start(ICommandSender commandSender, IEventPublisher eventPublisher)
         {
-            commandSender.ReplayEvents("remote",DateTime.MinValue,typeof(int));
+            commandSender.ReplayEvents("remote",DateTime.MinValue, null, typeof(int));
         }
     }
 
@@ -57,7 +57,7 @@ namespace Inceptum.Cqrs.Tests
             var process = new ReplayingProcess();
             var listener = new ReplayedEventsListener();
             var es=MockRepository.GenerateMock<IEventStoreAdapter>();
-            es.Expect(x => x.GetEventsFrom(DateTime.MinValue, typeof (int))).Return(new object[] {10});
+            es.Expect(x => x.GetEventsFrom(DateTime.MinValue, null, typeof (int))).Return(new object[] {10});
             using (new InMemoryCqrsEngine(
 
 

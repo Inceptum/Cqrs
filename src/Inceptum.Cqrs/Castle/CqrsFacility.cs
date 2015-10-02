@@ -234,19 +234,19 @@ namespace Inceptum.Cqrs.Castle
 
       
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, params Type[] types)
         {
-            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from, types);
+            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from, aggregateId, types);
         }
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types)
         {
-            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from,callback, types);
+            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from, aggregateId, callback, types);
         }
 
-        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback,int batchSize, params Type[] types)
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, int batchSize, params Type[] types)
         {
-            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from,callback,batchSize, types);
+            CqrsEngine.ReplayEvents(boundedContext,remoteBoundedContext, @from, aggregateId, callback,batchSize, types);
         }
 
         public void SendCommand<T>(T command, string remoteBoundedContext, uint priority = 0)
@@ -254,22 +254,22 @@ namespace Inceptum.Cqrs.Castle
             CqrsEngine.SendCommand(command,null,remoteBoundedContext,priority);
         }
 
-        public void ReplayEvents(string remoteBoundedContext, DateTime @from, int batchSize, params Type[] types)
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, int batchSize, params Type[] types)
         {
             throw new NotImplementedException();
         }
 
-        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Action<long> callback, int batchSize, params Type[] types)
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, int batchSize, params Type[] types)
         {
             throw new NotImplementedException();
         }
 
-        public void ReplayEvents(string remoteBoundedContext, DateTime @from, params Type[] types)
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, params Type[] types)
         {
             throw new NotImplementedException();
         }
 
-        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
+        public void ReplayEvents(string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types)
         {
             throw new NotImplementedException();
         }

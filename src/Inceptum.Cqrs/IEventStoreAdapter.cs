@@ -8,6 +8,6 @@ namespace Inceptum.Cqrs
     {
         void Bootstrap();
         Func<IRepository> Repository { get; }
-        IEnumerable<object> GetEventsFrom(DateTime @from, params Type[] types);
+        IEnumerable<object> GetEventsFrom(DateTime @from, Guid? aggregateId, params Type[] types);
     }
 }

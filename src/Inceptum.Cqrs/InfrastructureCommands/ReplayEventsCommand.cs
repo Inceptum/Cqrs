@@ -16,6 +16,8 @@ namespace Inceptum.Cqrs.InfrastructureCommands
         public DateTime From { get; set; }
         [ProtoMember(5)]
         public Guid Id { get; set; }
+        [ProtoMember(6)]
+        public Guid? AggregateId { get; set; }
     }
     
     
