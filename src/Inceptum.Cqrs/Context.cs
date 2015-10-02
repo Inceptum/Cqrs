@@ -154,6 +154,11 @@ namespace Inceptum.Cqrs
             throw new NotImplementedException();
         }
 
+        public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Guid? aggregateId, Action<long> callback, params Type[] types)
+        {
+            throw new NotImplementedException();
+        }
+
         public void ReplayEvents(string boundedContext, string remoteBoundedContext, DateTime @from, Action<long> callback, params Type[] types)
         {
             throw new NotImplementedException();
