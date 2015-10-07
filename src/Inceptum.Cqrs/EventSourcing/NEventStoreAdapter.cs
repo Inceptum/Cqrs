@@ -38,8 +38,11 @@ namespace Inceptum.Cqrs.EventSourcing
         }
         public IEnumerable<object> GetEventsFrom(DateTime @from, Guid? aggregateId, params Type[] types)
         {
-            return m_StoreEvents.Advanced.GetFrom(@from)
-                .Where(m => !aggregateId.HasValue || m.StreamId == aggregateId)
+            var commits = aggregateId.HasValue
+                ? m_StoreEvents.Advanced.GetFrom(aggregateId.Value, 0, int.MaxValue)
+                : m_StoreEvents.Advanced.GetFrom(@from);
+
+            return commits                
                 .SelectMany(c => c.Events)
                 .Where(e => types.Length==0 || types.Contains(e.Body.GetType())).Select(message => message.Body);
         }
