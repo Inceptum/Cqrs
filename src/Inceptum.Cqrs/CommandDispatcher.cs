@@ -3,20 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
 using Inceptum.Messaging.Contract;
 using NLog;
 
 namespace Inceptum.Cqrs
 {
-    //TODO: rename to EventHandlingResult
+    //TODO[kn]: rename to EventHandlingResult
     public class CommandHandlingResult
     {
-        public long  RetryDelay { get; set; } 
-        public bool  Retry { get; set; } 
-    }
+        public long RetryDelay { get; set; }
+        public bool Retry { get; set; }
 
+        public static CommandHandlingResult Ok()
+        {
+            return new CommandHandlingResult { Retry = false, RetryDelay = 0 };
+        }
+
+        public static CommandHandlingResult Fail(TimeSpan delay)
+        {
+            return new CommandHandlingResult { Retry = true, RetryDelay = (int)delay.TotalMilliseconds };
+        }
+    }
 
     internal class CommandDispatcher:IDisposable
     {
