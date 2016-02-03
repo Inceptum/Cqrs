@@ -351,21 +351,27 @@ namespace Inceptum.Cqrs.Tests
             }
         }
         [Test]
-        public void WithRepositoryAccessTest()
+        [TestCase(true,TestName = "WithRepositoryAccess for custom processing options")]
+        [TestCase(false, TestName = "WithRepositoryAccess for default processing options")]
+        public void WithRepositoryAccessTest(bool withProcessingOptions)
         {
             var log = MockRepository.GenerateMock<ILog>();
             using (var container = new WindsorContainer())
             {
                 container
                     .Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
-                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(Register.BoundedContext("bc")
-                         .WithNEventStore(dispatchCommits => Wireup.Init()
-                                                                            .LogTo(type => log)
-                                                                            .UsingInMemoryPersistence()
-                                                                            .InitializeStorageEngine()
-                                                                            .UsingJsonSerialization()
-                                                                            .UsingSynchronousDispatchScheduler()
-                                                                            .DispatchTo(dispatchCommits))))
+                    .AddFacility<CqrsFacility>(f =>
+                    {
+                        f.RunInMemory().Contexts(Register.BoundedContext("bc")
+                            .WithNEventStore(dispatchCommits => Wireup.Init()
+                                .LogTo(type => log)
+                                .UsingInMemoryPersistence()
+                                .InitializeStorageEngine()
+                                .UsingJsonSerialization()
+                                .UsingSynchronousDispatchScheduler()
+                                .DispatchTo(dispatchCommits))
+                            .ProcessingOptions("commands"));
+                    })
                     .Register(Component.For<RepositoryDependentComponent>().WithRepositoryAccess("bc"))
                     .Resolve<ICqrsEngineBootstrapper>().Start();
                 var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();

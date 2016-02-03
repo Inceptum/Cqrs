@@ -178,7 +178,8 @@ namespace Inceptum.Cqrs.Castle
         public bool CanResolve(CreationContext context, ISubDependencyResolver contextHandlerResolver, ComponentModel model, DependencyModel dependency)
         {
             var dependsOnBoundedContextRepository = model.ExtendedProperties["dependsOnBoundedContextRepository"] as string;
-            return dependency.TargetType == typeof(IRepository) && dependsOnBoundedContextRepository != null && m_BoundedContexts.Select(c => c as BoundedContextRegistration).Where(c => c != null).Any(c => c.Name == dependsOnBoundedContextRepository && c.HasEventStore);
+            var boundedContext = findBoundedContext(dependsOnBoundedContextRepository);
+            return dependency.TargetType == typeof(IRepository) && dependsOnBoundedContextRepository != null && boundedContext!=null  && boundedContext.HasEventStore;
         }
 
         public object Resolve(CreationContext context, ISubDependencyResolver contextHandlerResolver, ComponentModel model, DependencyModel dependency)

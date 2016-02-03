@@ -9,6 +9,7 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
     public interface IBoundedContextRegistration : IRegistration, IHideObjectMembers
     {
         string Name { get; }
+        bool HasEventStore { get; }
  
         IBoundedContextRegistration FailedCommandRetryDelay(long delay);
         IPublishingCommandsDescriptor<IBoundedContextRegistration> PublishingCommands(params Type[] commandsTypes);
