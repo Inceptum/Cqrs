@@ -47,13 +47,13 @@
     <Reference Include="EventStore.ClientAPI">
       <HintPath>..\packages\EventStore.Client.2.0.2\lib\net40\EventStore.ClientAPI.dll</HintPath>
     </Reference>
-    <Reference Include="Inceptum.Messaging, Version=2.0.0.7, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Inceptum.Messaging.2.0.0.7\lib\net45\Inceptum.Messaging.dll</HintPath>
+    <Reference Include="Inceptum.Messaging">
+      <HintPath>..\packages\Inceptum.Messaging.2.0.0.16\lib\net45\Inceptum.Messaging.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Inceptum.Messaging.RabbitMq, Version=2.0.0.7, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Inceptum.Messaging.RabbitMq.2.0.0.7\lib\net45\Inceptum.Messaging.RabbitMq.dll</HintPath>
+    <Reference Include="Inceptum.Messaging.RabbitMq">
+      <HintPath>..\packages\Inceptum.Messaging.RabbitMq.2.0.0.16\lib\net45\Inceptum.Messaging.RabbitMq.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -78,7 +78,8 @@
       <HintPath>..\packages\protobuf-net.2.0.0.640\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="RabbitMQ.Client">
-      <HintPath>..\packages\RabbitMQ.Client.3.3.2\lib\net30\RabbitMQ.Client.dll</HintPath>
+      <HintPath>..\packages\RabbitMQ.Client.3.5.0\lib\net40\RabbitMQ.Client.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\packages\RhinoMocks.3.6.1\lib\net\Rhino.Mocks.dll</HintPath>
