@@ -47,13 +47,12 @@
     <Reference Include="EventStore.ClientAPI">
       <HintPath>..\packages\EventStore.Client.2.0.2\lib\net40\EventStore.ClientAPI.dll</HintPath>
     </Reference>
-    <Reference Include="Inceptum.Messaging">
-      <HintPath>..\packages\Inceptum.Messaging.2.0.0.16\lib\net45\Inceptum.Messaging.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Inceptum.Messaging, Version=2.0.0.15, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Inceptum.Messaging.2.0.0.15\lib\net45\Inceptum.Messaging.dll</HintPath>
     </Reference>
     <Reference Include="Inceptum.Messaging.RabbitMq">
-      <HintPath>..\packages\Inceptum.Messaging.RabbitMq.2.0.0.16\lib\net45\Inceptum.Messaging.RabbitMq.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Inceptum.Messaging.RabbitMq.2.0.0.15\lib\net45\Inceptum.Messaging.RabbitMq.dll</HintPath>
     </Reference>
     <Reference Include="NEventStore, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
