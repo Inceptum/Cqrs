@@ -26,37 +26,37 @@ namespace Inceptum.Cqrs.EventSourcing
 
         public void Bootstrap()
         {
-            if(m_Bootstrap != null)
+            if (m_Bootstrap != null)
                 m_Bootstrap();
         }
 
-        public Func<IRepository> Repository {
+        public Func<IRepository> Repository
+        {
             get
             {
                 return () => new EventStoreRepository(m_StoreEvents, m_AggregateFactory ?? new AggregateFactory(), new ConflictDetector());
             }
         }
+
         public IEnumerable<object> GetEventsFrom(DateTime @from, Guid? aggregateId, params Type[] types)
         {
-            var commits = aggregateId.HasValue
-                ? m_StoreEvents.Advanced.GetFrom(aggregateId.Value, 0, int.MaxValue)
-                : m_StoreEvents.Advanced.GetFrom(@from);
+            var events = aggregateId.HasValue ?
+                m_StoreEvents.OpenStream(aggregateId.Value, 0, int.MaxValue).CommittedEvents
+                : m_StoreEvents.Advanced.GetFrom(@from).SelectMany(x => x.Events);
 
-            return commits                
-                .SelectMany(c => c.Events)
-                .Where(e => types.Length==0 || types.Contains(e.Body.GetType())).Select(message => message.Body);
+            var filteredByTypeEvents = events.Where(e => types.Length == 0 || types.Contains(e.Body.GetType())).Select(message => message.Body);
+
+            return filteredByTypeEvents;
         }
 
-
-          
         //TODO:  resolve aggregates from IoC
         public class AggregateFactory : IConstructAggregates
         {
             public IAggregate Build(Type type, Guid id, IMemento snapshot)
             {
                 ConstructorInfo constructor = type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new Type[] { typeof(Guid), typeof(IMemento) }, null);
-                return constructor.Invoke(new object[] {id, snapshot}) as IAggregate;
+                return constructor.Invoke(new object[] { id, snapshot }) as IAggregate;
             }
-        } 
+        }
     }
 }
