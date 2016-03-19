@@ -442,6 +442,8 @@ namespace Inceptum.Cqrs
 
         public void Dispose()
         {
+            if (m_ApplyBatchesThread.ThreadState == ThreadState.Unstarted) 
+                return;
             m_Stop.Set();
             m_ApplyBatchesThread.Join();
             applyBatches(true);
