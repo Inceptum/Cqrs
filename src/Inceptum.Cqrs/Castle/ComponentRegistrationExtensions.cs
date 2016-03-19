@@ -15,7 +15,7 @@ namespace Castle.MicroKernel.Registration
                     IsProjection = true,
                     ProjectedBoundContext = projectedBoundContext,
                     BoundContext = hostingBoundContext,
-                    BatchSize = hostingBoundContext,
+                    BatchSize = batchSize,
                     ApplyTimeoutInSeconds = applyTimeoutInSeconds,
                     BeforeBatchApply = beforeBatchApply,
                     AfterBatchApply = afterBatchApply
