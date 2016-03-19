@@ -25,9 +25,13 @@ namespace Inceptum.Cqrs
         private readonly long m_FailedEventRetryDelay;
         private readonly Logger m_Logger;
         private readonly Stopwatch m_SinceFirstEvent=new Stopwatch();
+        private Action m_BeforeBatchApply;
+        private Action m_AfterBatchApply;
 
-        public BatchManager( long failedEventRetryDelay,Logger logger,int batchSize=0, long applyTimeout=0)
+        public BatchManager( long failedEventRetryDelay,Logger logger,int batchSize=0, long applyTimeout=0,Action beforeBatchApply=null,Action afterBatchApply=null )
         {
+            m_AfterBatchApply = afterBatchApply??(()=>{});
+            m_BeforeBatchApply = beforeBatchApply ?? (() => { });
             m_Logger = logger;
             m_FailedEventRetryDelay = failedEventRetryDelay;
             m_ApplyTimeout = applyTimeout;
@@ -73,10 +77,12 @@ namespace Inceptum.Cqrs
                 }
             }
 
+            m_BeforeBatchApply();
             foreach (var handle in handles)
             {
                 handle();
             }
+            m_AfterBatchApply();
         }
 
         private void doHandle(Func<object[], CommandHandlingResult[]> handler, Tuple<object, AcknowledgeDelegate>[] events, EventOrigin origin)
@@ -114,8 +120,8 @@ namespace Inceptum.Cqrs
         readonly Dictionary<Guid, Replay> m_Replays = new Dictionary<Guid, Replay>();
         readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
         readonly ManualResetEvent m_Stop=new ManualResetEvent(false);
-        private Thread m_ApplyBatchesThread;
-        private BatchManager m_DefaultBatchManager;
+        private readonly Thread m_ApplyBatchesThread;
+        private readonly BatchManager m_DefaultBatchManager;
 
         public EventDispatcher(string boundedContext)
         {
@@ -145,11 +151,11 @@ namespace Inceptum.Cqrs
             wire(fromBoundedContext, o,null, parameters);
         }
 
-        public void Wire(string fromBoundedContext, object o, int batchSize, int applyTimeoutInSeconds, params OptionalParameter[] parameters)
+        public void Wire(string fromBoundedContext, object o, int batchSize, int applyTimeoutInSeconds, Action<object> beforeBatchApply, Action<object> afterBatchApply, params OptionalParameter[] parameters)
         {
             var batchManager = batchSize==0 && applyTimeoutInSeconds==0
                 ?null
-                :new BatchManager(m_FailedEventRetryDelay, m_Logger, batchSize, applyTimeoutInSeconds);
+                : new BatchManager(m_FailedEventRetryDelay, m_Logger, batchSize, applyTimeoutInSeconds, () => beforeBatchApply(o), () => afterBatchApply(o));
             wire(fromBoundedContext, o, batchManager,parameters);
         }
 

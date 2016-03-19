@@ -122,8 +122,14 @@ namespace Inceptum.Cqrs.Castle
                 if (registration == null)
                     throw new ComponentRegistrationException(string.Format("Bounded context {0} was not registered", boundContext));
 
+
+                var batchSize = (int)(handler.ComponentModel.ExtendedProperties["BatchSize"]);
+                var applyTimeoutInSeconds = (int)(handler.ComponentModel.ExtendedProperties["ApplyTimeoutInSeconds"]);
+                var beforeBatchApply = (Action<object>)(handler.ComponentModel.ExtendedProperties["beforeBatchApply"]);
+                var afterBatchApply = (Action<object>)(handler.ComponentModel.ExtendedProperties["afterBatchApply"]);
+
                 //TODO: decide which service to use
-                registration.WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext);
+                registration.WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply, afterBatchApply);
 
             }
 

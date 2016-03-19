@@ -62,6 +62,20 @@ namespace Inceptum.Cqrs.Tests
             HandledEvents.Add(e);
             return new CommandHandlingResult(){Retry = true,RetryDelay = 100};
         }
+
+        public void OnBatchStart()
+        {
+            BatchStartReported = true;
+        }
+
+        public bool BatchStartReported { get; set; }
+        public bool BatchFinishReported { get; set; }
+
+
+        public void OnBatchFinish()
+        {
+            BatchFinishReported = true;
+        }
     }   
     
 
@@ -149,7 +163,7 @@ namespace Inceptum.Cqrs.Tests
         {
             var dispatcher = new EventDispatcher("testBC");
             var handler = new EventHandler();
-            dispatcher.Wire("testBC", handler, 3, 1000000);
+            dispatcher.Wire("testBC", handler, 3, 1000000, h => ((EventHandler)h).OnBatchStart(), h => ((EventHandler)h).OnBatchFinish());
             Tuple<long, bool> result = null;
             handler.FailOnce = false;
             dispatcher.Dispatch("testBC", new[]
@@ -164,6 +178,8 @@ namespace Inceptum.Cqrs.Tests
             });
             Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "Not all events were delivered");
+            Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
+            Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
         }
 
         [Test]
@@ -171,7 +187,7 @@ namespace Inceptum.Cqrs.Tests
         {
             var dispatcher = new EventDispatcher("testBC");
             var handler = new EventHandler();
-            dispatcher.Wire("testBC", handler, 3, 1);
+            dispatcher.Wire("testBC", handler, 3, 1, h => ((EventHandler)h).OnBatchStart(), h =>((EventHandler)h).OnBatchFinish());
             Tuple<long, bool> result = null;
             handler.FailOnce = false;
             dispatcher.Dispatch("testBC", new[]
@@ -183,6 +199,8 @@ namespace Inceptum.Cqrs.Tests
             Thread.Sleep(2000);
             Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(2), "Not all events were delivered");
+            Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
+            Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
         }
     }
 }

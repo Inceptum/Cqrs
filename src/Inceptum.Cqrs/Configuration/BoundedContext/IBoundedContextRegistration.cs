@@ -28,9 +28,9 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         IBoundedContextRegistration WithCommandsHandler(Type handler);
 
 
-        IBoundedContextRegistration WithProjection(object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0);
-        IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0);
-        IBoundedContextRegistration WithProjection<TListener>(string fromBoundContext);
+        IBoundedContextRegistration WithProjection<TProjection>(TProjection projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<TProjection> beforeBatchApply = null, Action<TProjection> afterBatchApply = null);
+        IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<object> beforeBatchApply = null, Action<object> afterBatchApply = null);
+        IBoundedContextRegistration WithProjection<TProjection>(string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<TProjection> beforeBatchApply = null, Action<TProjection> afterBatchApply = null);
 
 
         IBoundedContextRegistration WithEventStore<T>() where T : IEventStoreAdapter;
