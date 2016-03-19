@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Castle.Components.DictionaryAdapter;
 using Inceptum.Cqrs.Configuration;
@@ -141,6 +142,47 @@ namespace Inceptum.Cqrs.Tests
             Assert.That(result, Is.Not.Null, "fail was not reported");
             Assert.That(result.Item2, Is.False, "fail was not reported");
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "not all events were handled (exception in first event handling prevented following events processing?)");
+        }
+
+        [Test]
+        public void BatchDispatchTriggeringBySizeTest()
+        {
+            var dispatcher = new EventDispatcher("testBC");
+            var handler = new EventHandler();
+            dispatcher.Wire("testBC", handler, 3, 1000000);
+            Tuple<long, bool> result = null;
+            handler.FailOnce = false;
+            dispatcher.Dispatch("testBC", new[]
+            {
+                Tuple.Create<object,AcknowledgeDelegate>("a", (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
+                Tuple.Create<object,AcknowledgeDelegate>("b", (delay, acknowledge) => { }),
+            });
+            Assert.That(handler.HandledEvents.Count, Is.EqualTo(0), "Events were delivered before batch is filled");
+            dispatcher.Dispatch("testBC", new[]
+            {
+                Tuple.Create<object,AcknowledgeDelegate>("с", (delay, acknowledge) => { })
+            });
+            Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
+            Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "Not all events were delivered");
+        }
+
+        [Test]
+        public void BatchDispatchTriggeringByTimeoutTest()
+        {
+            var dispatcher = new EventDispatcher("testBC");
+            var handler = new EventHandler();
+            dispatcher.Wire("testBC", handler, 3, 1);
+            Tuple<long, bool> result = null;
+            handler.FailOnce = false;
+            dispatcher.Dispatch("testBC", new[]
+            {
+                Tuple.Create<object,AcknowledgeDelegate>("a", (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
+                Tuple.Create<object,AcknowledgeDelegate>("b", (delay, acknowledge) => { })
+            });
+            Assert.That(handler.HandledEvents.Count, Is.EqualTo(0), "Events were delivered before batch apply timeoout");
+            Thread.Sleep(2000);
+            Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
+            Assert.That(handler.HandledEvents.Count, Is.EqualTo(2), "Not all events were delivered");
         }
     }
 }

@@ -141,9 +141,16 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             return this;
         }
 
-        public IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext)
+
+        public IBoundedContextRegistration WithProjection(object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0)
         {
-            RegisterProjections(projection, fromBoundContext);
+            RegisterProjections(projection, fromBoundContext, batchSize, applyTimeoutInSeconds);
+            return this;
+        }
+
+        public IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0)
+        {
+            RegisterProjections(projection, fromBoundContext,   batchSize = 0,   applyTimeoutInSeconds = 0);
             return this;
         }
 
@@ -153,16 +160,16 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             return this;
         }
 
-        protected void RegisterProjections(object projection, string fromBoundContext)
+        protected void RegisterProjections(object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0)
         {
             if (projection == null) throw new ArgumentNullException("projection");
-            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext));
+            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext, batchSize, applyTimeoutInSeconds));
         }
 
-        protected void RegisterProjections(Type projection, string fromBoundContext)
+        protected void RegisterProjections(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0)
         {
             if (projection == null) throw new ArgumentNullException("projection");
-            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext));
+            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext, batchSize, applyTimeoutInSeconds));
         }
 
         public IBoundedContextRegistration WithProcess(object process)

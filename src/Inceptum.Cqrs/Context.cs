@@ -172,6 +172,7 @@ namespace Inceptum.Cqrs
         public void Dispose()
         {
             CommandDispatcher.Dispose();
+            EventDispatcher.Dispose();
         }
 
 

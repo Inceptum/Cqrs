@@ -1,29 +1,163 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using Inceptum.Cqrs.Configuration;
 using Inceptum.Cqrs.InfrastructureCommands;
 using Inceptum.Messaging.Contract;
 using NLog;
+using ThreadState = System.Threading.ThreadState;
 
 namespace Inceptum.Cqrs
 {
-    internal class EventDispatcher
+
+    class BatchManager
     {
-        readonly Dictionary<EventOrigin, List<Func<object[], CommandHandlingResult[]>>> m_Handlers = new Dictionary<EventOrigin, List<Func<object[], CommandHandlingResult[]>>>();
+        readonly List<Action> m_Events=new List<Action>();
+        private long m_Counter = 0;
+        private readonly int m_BatchSize;
+        private readonly long m_ApplyTimeout;
+        private readonly long m_FailedEventRetryDelay;
+        private readonly Logger m_Logger;
+        private readonly Stopwatch m_SinceFirstEvent=new Stopwatch();
+
+        public BatchManager( long failedEventRetryDelay,Logger logger,int batchSize=0, long applyTimeout=0)
+        {
+            m_Logger = logger;
+            m_FailedEventRetryDelay = failedEventRetryDelay;
+            m_ApplyTimeout = applyTimeout;
+            m_BatchSize = batchSize;
+        }
+
+        public void Handle(Func<object[], CommandHandlingResult[]> handler, Tuple<object, AcknowledgeDelegate>[] events, EventOrigin origin)
+        {
+            if(!events.Any())
+                return;
+
+            if (m_BatchSize == 0 && m_ApplyTimeout == 0)
+            {
+                doHandle(handler, events, origin);
+                return;
+            }
+
+            lock (m_Events)
+            {
+                m_Events.Add(() => doHandle(handler, events, origin));
+                if(m_Counter==0)
+                    m_SinceFirstEvent.Start();
+                m_Counter += events.Length;
+                ApplyBatchIfRequired();
+            }
+        }
+
+        internal void ApplyBatchIfRequired(bool force = false)
+        {
+            Action[] handles = new Action[0];
+
+            lock (m_Events)
+            {
+                if (m_Counter == 0)
+                    return;
+
+                if (m_Counter >= m_BatchSize || m_SinceFirstEvent.ElapsedMilliseconds > m_ApplyTimeout || force)
+                {
+                    handles = m_Events.ToArray();
+                    m_Events.Clear();
+                    m_Counter = 0;
+                    m_SinceFirstEvent.Reset();
+                }
+            }
+
+            foreach (var handle in handles)
+            {
+                handle();
+            }
+        }
+
+        private void doHandle(Func<object[], CommandHandlingResult[]> handler, Tuple<object, AcknowledgeDelegate>[] events, EventOrigin origin)
+        {
+            //TODO: Wat if connect is broken and engine failes to aknowledge?..
+            CommandHandlingResult[] results;
+            try
+            {
+                results = handler(@events.Select(e => e.Item1).ToArray());
+                //TODO: verify number of reults matches nuber of events
+            }
+            catch (Exception e)
+            {
+                m_Logger.WarnException("Failed to handle events batch of type " + origin.EventType.Name, e);
+                results = @events.Select(x => new CommandHandlingResult {Retry = true, RetryDelay = m_FailedEventRetryDelay}).ToArray();
+            }
+
+            for (var i = 0; i < events.Length; i++)
+            {
+                var result = results[i];
+                var acknowledge = events[i].Item2;
+                if (result.Retry)
+                    acknowledge(result.RetryDelay, !result.Retry);
+                else
+                    acknowledge(0, true);
+            }
+        }
+    }
+
+    internal class EventDispatcher:IDisposable
+    {
+        readonly Dictionary<EventOrigin, List<Tuple<Func<object[], CommandHandlingResult[]>,BatchManager>>> m_Handlers = new Dictionary<EventOrigin, List<Tuple<Func<object[], CommandHandlingResult[]>, BatchManager>>>();
         private readonly string m_BoundedContext;
         internal static long m_FailedEventRetryDelay = 60000;
         readonly Dictionary<Guid, Replay> m_Replays = new Dictionary<Guid, Replay>();
         readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
+        readonly ManualResetEvent m_Stop=new ManualResetEvent(false);
+        private Thread m_ApplyBatchesThread;
+        private BatchManager m_DefaultBatchManager;
+
         public EventDispatcher(string boundedContext)
         {
+            m_DefaultBatchManager = new BatchManager(m_FailedEventRetryDelay, m_Logger);
             m_BoundedContext = boundedContext;
+            m_ApplyBatchesThread = new Thread(() =>
+            {
+                while (!m_Stop.WaitOne(1000))
+                {
+                    applyBatches();
+                }
+            });
+            m_ApplyBatchesThread.Name = string.Format("'{0}' bounded context batch event processing thread",boundedContext);
         }
-        public void Wire(string fromBoundedContext,object o, params OptionalParameter[] parameters)
+
+        private void applyBatches(bool force=false)
         {
+            foreach (var batchManager in m_Handlers.SelectMany(h=>h.Value.Select(_=>_.Item2)))
+            {
+                batchManager.ApplyBatchIfRequired(force);
+            }
+        }
+
+        public void Wire(string fromBoundedContext,object o, params OptionalParameter[] parameters)
+        { 
+            
+            wire(fromBoundedContext, o,null, parameters);
+        }
+
+        public void Wire(string fromBoundedContext, object o, int batchSize, int applyTimeoutInSeconds, params OptionalParameter[] parameters)
+        {
+            var batchManager = batchSize==0 && applyTimeoutInSeconds==0
+                ?null
+                :new BatchManager(m_FailedEventRetryDelay, m_Logger, batchSize, applyTimeoutInSeconds);
+            wire(fromBoundedContext, o, batchManager,parameters);
+        }
+
+        private void wire(string fromBoundedContext, object o,BatchManager batchManager, params OptionalParameter[] parameters)
+        {
+            if(batchManager!=null && m_ApplyBatchesThread.ThreadState==ThreadState.Unstarted)
+                m_ApplyBatchesThread.Start();
+
             parameters = parameters.Concat(new OptionalParameter[] { new OptionalParameter<string>("boundedContext", fromBoundedContext) }).ToArray();
 
             var handleMethods = o.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -50,16 +184,24 @@ namespace Inceptum.Cqrs
 
             foreach (var method in handleMethods)
             {
-                if(method.isBatch)
-                    registerBatchHandler(fromBoundedContext, method.eventType, o, method.callParameters.ToDictionary(p => p.parameter, p => p.optionalParameter.Value));
-                else
-                    registerHandler(fromBoundedContext, method.eventType, o, method.callParameters.ToDictionary(p => p.parameter, p => p.optionalParameter.Value), method.returnsResult);
+                var eventType = method.isBatch ? method.eventType.GetElementType() : method.eventType;
+                var key = new EventOrigin(fromBoundedContext, eventType);
+                List<Tuple<Func<object[], CommandHandlingResult[]>, BatchManager>> handlersList;
+                if (!m_Handlers.TryGetValue(key, out handlersList))
+                {
+                    handlersList = new List<Tuple<Func<object[], CommandHandlingResult[]>, BatchManager>>();
+                    m_Handlers.Add(key, handlersList);
+                }
+                var handler=method.isBatch
+                    ?createBatchHandler(eventType, o, method.callParameters.ToDictionary(p => p.parameter, p => p.optionalParameter.Value))
+                    :createHandler(eventType, o, method.callParameters.ToDictionary(p => p.parameter, p => p.optionalParameter.Value), method.returnsResult);
+                
+                handlersList.Add(Tuple.Create(handler,batchManager??m_DefaultBatchManager));
             }
         }
 
-        private void registerBatchHandler(string fromBoundedContext, Type eventsType, object o, Dictionary<ParameterInfo, object> optionalParameters)
+        private Func<object[], CommandHandlingResult[]> createBatchHandler(Type eventType, object o, Dictionary<ParameterInfo, object> optionalParameters)
         {
-            var eventType = eventsType.GetElementType();
             LabelTarget returnTarget = Expression.Label(typeof(CommandHandlingResult[]));
             var returnLabel = Expression.Label(returnTarget, Expression.Constant(new CommandHandlingResult[0]));
 
@@ -82,18 +224,11 @@ namespace Inceptum.Cqrs
 
             var lambda = (Expression<Func<object[], CommandHandlingResult[]>>)Expression.Lambda(create, events);
 
-            List<Func<object[], CommandHandlingResult[]>> handlersList;
-            var key = new EventOrigin(fromBoundedContext, eventType);
-            if (!m_Handlers.TryGetValue(key, out handlersList))
-            {
-                handlersList = new List<Func<object[], CommandHandlingResult[]>>();
-                m_Handlers.Add(key, handlersList);
-            }
-            handlersList.Add(lambda.Compile());
-
+           
+            return lambda.Compile();
         }
 
-        private void registerHandler(string fromBoundedContext, Type eventType, object o, Dictionary<ParameterInfo, object> optionalParameters, bool returnsResult)
+        private Func<object[], CommandHandlingResult[]> createHandler(Type eventType, object o, Dictionary<ParameterInfo, object> optionalParameters, bool returnsResult)
         {
             LabelTarget returnTarget = Expression.Label(typeof(CommandHandlingResult[]));
             var returnLabel = Expression.Label(returnTarget, Expression.Constant(new CommandHandlingResult[0]));
@@ -102,7 +237,7 @@ namespace Inceptum.Cqrs
             var result = Expression.Variable(typeof(List<CommandHandlingResult>), "result");
             var @event = Expression.Variable(typeof(object), "@event");
             var handleParams = new Expression[] { Expression.Convert(@event, eventType) }.Concat(optionalParameters.Select(p => Expression.Constant(p.Value))).ToArray();
-             var callHandler = Expression.Call(Expression.Constant(o), "Handle", null, handleParams);
+            var callHandler = Expression.Call(Expression.Constant(o), "Handle", null, handleParams);
 
 
             var okResult = Expression.Constant(new CommandHandlingResult { Retry = false, RetryDelay = 0 });
@@ -120,16 +255,7 @@ namespace Inceptum.Cqrs
                      Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), failResult)
                     )
                 );
-            
-
-/*
-
-            if (returnsResult)
-                registerResult = Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), callHandler);
-            else
-            {
-                registerResult = Expression.Block(callHandler, Expression.Call(result, typeof(List<CommandHandlingResult>).GetMethod("Add"), okResult));
-            }*/
+    
 
             var create = Expression.Block(
                new[] { result, @event },
@@ -141,14 +267,8 @@ namespace Inceptum.Cqrs
 
             var lambda = (Expression<Func<object[], CommandHandlingResult[]>>)Expression.Lambda(create, events);
 
-            List<Func<object[], CommandHandlingResult[]>> handlersList;
-            var key = new EventOrigin(fromBoundedContext, eventType);
-            if (!m_Handlers.TryGetValue(key, out handlersList))
-            {
-                handlersList = new List<Func<object[], CommandHandlingResult[]>>();
-                m_Handlers.Add(key, handlersList);
-            }
-            handlersList.Add(lambda.Compile());
+           
+            return lambda.Compile();
         }
 
 
@@ -192,7 +312,7 @@ namespace Inceptum.Cqrs
 
         private void dispatch(EventOrigin origin, Tuple<object, AcknowledgeDelegate>[] events)
         {
-            List<Func<object[], CommandHandlingResult[]>> list;
+            List<Tuple<Func<object[], CommandHandlingResult[]>, BatchManager>> list;
 
             if (events == null)
             {
@@ -212,27 +332,9 @@ namespace Inceptum.Cqrs
 
             foreach (var handler in list)
             {
-                CommandHandlingResult[] results;
-                try
-                {
-                    results = handler(@events.Select(e=>e.Item1).ToArray());
-                    //TODO: verify number of reults matches nuber of events
-                }
-                catch (Exception e)
-                {
-                    m_Logger.WarnException("Failed to handle events batch of type " + origin.EventType.Name, e);
-                    results = @events.Select(x=>new CommandHandlingResult {Retry = true, RetryDelay = m_FailedEventRetryDelay}).ToArray();
-                }
+                var batchManager = handler.Item2;
+                batchManager.Handle(handler.Item1, events,origin);
 
-                for (int i = 0; i < events.Length; i++)
-                {
-                    var result = results[i];
-                    var acknowledge = events[i].Item2;
-                    if (result.Retry)
-                        acknowledge(result.RetryDelay, !result.Retry);
-                    else
-                        acknowledge(0, true);
-                }
             }
             
         }
@@ -332,5 +434,11 @@ namespace Inceptum.Cqrs
 
         }
 
+        public void Dispose()
+        {
+            m_Stop.Set();
+            m_ApplyBatchesThread.Join();
+            applyBatches(true);
+        }
     }
 }

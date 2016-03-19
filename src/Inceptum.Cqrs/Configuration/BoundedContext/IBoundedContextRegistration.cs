@@ -28,8 +28,8 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         IBoundedContextRegistration WithCommandsHandler(Type handler);
 
 
-        IBoundedContextRegistration WithProjection(object projection, string fromBoundContext);
-        IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext);
+        IBoundedContextRegistration WithProjection(object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0);
+        IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0);
         IBoundedContextRegistration WithProjection<TListener>(string fromBoundContext);
 
 
