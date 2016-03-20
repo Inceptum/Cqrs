@@ -140,7 +140,7 @@ namespace Inceptum.Cqrs.Tests
 
     class EventsListener
     {
-        public List<object> Handled = new List<object>();
+        public readonly List<object> Handled = new List<object>();
         public int NameChangedCalledCounter { get; set; }
         public int CreatedCalledCounter { get; set; }
 
@@ -150,7 +150,7 @@ namespace Inceptum.Cqrs.Tests
             foreach (var e in events)
             {
                 Handled.Add(e);
-                Console.WriteLine(boundedContext + ":" + e);
+                Console.WriteLine(boundedContext + "!!:" + e);
             }
             return events.Select(e => new CommandHandlingResult()).ToArray();
         }
@@ -158,13 +158,13 @@ namespace Inceptum.Cqrs.Tests
         {
             CreatedCalledCounter++;
             Handled.Add(e);
-            Console.WriteLine(boundedContext + ":" + e);
+            Console.WriteLine(boundedContext + "  :" + e);
         }
 
         public void Handle(int e, string boundedContext)
         {
             Handled.Add(e);
-            Console.WriteLine(boundedContext + ":" + e);
+            Console.WriteLine(boundedContext + "  :" + e);
         }
 
         public void Reset()
@@ -237,13 +237,13 @@ namespace Inceptum.Cqrs.Tests
                     using (messagingEngine.Subscribe(defaultCommands, o => received.Set(), s => { }, typeof(string)))
                     {
                         engine.SendCommand("test", "bc2", "bc1");
-                        Assert.That(received.WaitOne(1000), Is.True, "not defined for context command was not routed with default route map");
+                        Assert.That(received.WaitOne(2000), Is.True, "not defined for context command was not routed with default route map");
                     }
 
                     using (messagingEngine.Subscribe(bcCommands, o => received.Set(), s => { }, typeof(int)))
                     {
                         engine.SendCommand(1, "bc2", "bc1");
-                        Assert.That(received.WaitOne(1000), Is.True, "defined for context command was not routed with context route map");
+                        Assert.That(received.WaitOne(2000), Is.True, "defined for context command was not routed with context route map");
                     }
                 }
             }
@@ -280,7 +280,7 @@ namespace Inceptum.Cqrs.Tests
                 {
                     messagingEngine.Send("cmd", new Endpoint("InMemory", "commands1", serializationFormat: "json"));
 
-                    Assert.That(TestSaga.Complete.WaitOne(1000), Is.True, "Saga has not got events or failed to send command");
+                    Assert.That(TestSaga.Complete.WaitOne(2000), Is.True, "Saga has not got events or failed to send command");
                 }
             }
         }
@@ -715,7 +715,8 @@ namespace Inceptum.Cqrs.Tests
                 ManualResetEvent replayFinished = new ManualResetEvent(false);
                 engine.ReplayEvents("projections", "local", DateTime.MinValue, null, l => replayFinished.Set(), 10, types);
 
-                Assert.That(replayFinished.WaitOne(3000), Is.True, "Events were not replayed");
+                Assert.That(replayFinished.WaitOne(5000), Is.True, "Events were not replayed");
+                Thread.Sleep(1000);
                 Console.WriteLine("Disposing...");
             }
 

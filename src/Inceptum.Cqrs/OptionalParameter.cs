@@ -1,12 +1,21 @@
 ﻿using System;
+using System.Linq.Expressions;
+using Castle.MicroKernel.Registration;
 
 namespace Inceptum.Cqrs
 {
+    //TODO: arrange thid crap
+
+
     abstract class OptionalParameter
     {
         public object Value { get; protected set; }
         public Type Type { get; protected set; }
         public string Name { get; protected set; }
+        public virtual Expression ValueExpression
+        {
+            get { return Expression.Constant(Value); }
+        }
     }
 
     internal class FactoryParameter<T> : OptionalParameter
@@ -15,6 +24,23 @@ namespace Inceptum.Cqrs
         {
             Value = func;
             Type = typeof(T); 
+        }
+    }
+
+    internal class ExpressionParameter : OptionalParameter
+    {
+        public ExpressionParameter(string name, Type type)
+        {
+            Type = type;
+            Name = name;
+            Parameter = Expression.Parameter(typeof(object));
+        }
+
+        public ParameterExpression Parameter { get; set; }
+
+        public override Expression ValueExpression
+        {
+            get { return Expression.Convert(Parameter, Type); }
         }
     }
 

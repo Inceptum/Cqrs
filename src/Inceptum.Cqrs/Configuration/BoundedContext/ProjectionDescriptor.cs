@@ -7,12 +7,14 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         private readonly string m_FromBoundContext;
         private readonly int m_BatchSize;
         private readonly int m_ApplyTimeoutInSeconds;
-        private Action<object> m_BeforeBatchApply;
-        private Action<object> m_AfterBatchApply;
+        private Func<object, object> m_BeforeBatchApply;
+        private Action<object, object> m_AfterBatchApply;
+        private Type m_BatchContextType;
 
-        public ProjectionDescriptor(object projection, string fromBoundContext, int batchSize, int applyTimeoutInSeconds , Action<object> beforeBatchApply, Action<object> afterBatchApply)
+        public ProjectionDescriptor(object projection, string fromBoundContext, int batchSize, int applyTimeoutInSeconds, Func<object, object> beforeBatchApply, Action<object, object> afterBatchApply, Type batchContextType)
             : base(projection)
         {
+            m_BatchContextType = batchContextType;
             m_AfterBatchApply = afterBatchApply;
             m_BeforeBatchApply = beforeBatchApply;
             m_ApplyTimeoutInSeconds = applyTimeoutInSeconds;
@@ -20,9 +22,10 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             m_FromBoundContext = fromBoundContext;
         }
 
-        public ProjectionDescriptor(Type projection, string fromBoundContext, int batchSize, int applyTimeoutInSeconds, Action<object> beforeBatchApply, Action<object> afterBatchApply) 
+        public ProjectionDescriptor(Type projection, string fromBoundContext, int batchSize, int applyTimeoutInSeconds, Func<object, object> beforeBatchApply, Action<object, object> afterBatchApply,Type batchContextType) 
             : base(projection)
         {
+            m_BatchContextType = batchContextType;
             m_AfterBatchApply = afterBatchApply;
             m_BeforeBatchApply = beforeBatchApply;
             m_ApplyTimeoutInSeconds = applyTimeoutInSeconds;
@@ -36,7 +39,13 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             foreach (var projection in ResolvedDependencies)
             {
                 //TODO: pass bounded context ReadModel
-                context.EventDispatcher.Wire(m_FromBoundContext, projection, m_BatchSize, m_ApplyTimeoutInSeconds,m_BeforeBatchApply,m_AfterBatchApply);
+                context.EventDispatcher.Wire(m_FromBoundContext, projection, 
+                    m_BatchSize, 
+                    m_ApplyTimeoutInSeconds,
+                    m_BatchContextType,
+                    m_BeforeBatchApply,
+                    m_AfterBatchApply
+                    );
             }
         }
     }

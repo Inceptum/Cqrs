@@ -125,11 +125,12 @@ namespace Inceptum.Cqrs.Castle
 
                 var batchSize = (int)(handler.ComponentModel.ExtendedProperties["BatchSize"]);
                 var applyTimeoutInSeconds = (int)(handler.ComponentModel.ExtendedProperties["ApplyTimeoutInSeconds"]);
-                var beforeBatchApply = (Action<object>)(handler.ComponentModel.ExtendedProperties["beforeBatchApply"]);
-                var afterBatchApply = (Action<object>)(handler.ComponentModel.ExtendedProperties["afterBatchApply"]);
+                var beforeBatchApply = (Func<object, object>)(handler.ComponentModel.ExtendedProperties["BeforeBatchApply"]);
+                var afterBatchApply = (Action<object,object>)(handler.ComponentModel.ExtendedProperties["AfterBatchApply"]);
+                var batchContextType = (Type)(handler.ComponentModel.ExtendedProperties["BatchContextType"]);
 
                 //TODO: decide which service to use
-                registration.WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply, afterBatchApply);
+                registration.WithProjection(handler.ComponentModel.Services.First(), projectedBoundContext, batchSize, applyTimeoutInSeconds,batchContextType, beforeBatchApply, afterBatchApply);
 
             }
 

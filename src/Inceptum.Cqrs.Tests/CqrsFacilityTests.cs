@@ -69,6 +69,29 @@ namespace Inceptum.Cqrs.Tests
     }
 
 
+    internal class EventListenerWithBatchSupport  
+    {
+        public readonly List<FakeDbSession> Sessions = new List<FakeDbSession>();
+        public readonly List<string> Events = new List<string>();
+
+        void Handle(string m, FakeDbSession session)
+        {
+            Events.Add(m);
+            if (session != null)
+                session.ApplyEvent(m);
+            Console.WriteLine(m);
+        }
+
+        public FakeDbSession CreateDbSession()
+        {
+            var session = new FakeDbSession();
+            Sessions.Add(session);
+            return session;
+        }
+    }
+
+
+
     internal class EventListener
     {
         public readonly List<Tuple<string, string>> EventsWithBoundedContext = new List<Tuple<string, string>>();
@@ -79,10 +102,28 @@ namespace Inceptum.Cqrs.Tests
             EventsWithBoundedContext.Add(Tuple.Create(m, boundedContext));
             Console.WriteLine(boundedContext + ":" + m);
         }
-        void Handle(string m)
+ 
+
+    }
+
+    internal class FakeDbSession
+    {
+        public bool Commited { get; set; }
+        public List<string> Events { get; set; }
+
+        public FakeDbSession()
         {
-            Events.Add(m);
-            Console.WriteLine(m);
+            Events=new List<string>();
+        }
+
+        public void Commit()
+        {
+            Commited = true;
+        }
+
+        public void ApplyEvent(string @event)
+        {
+            Events.Add(@event);
         }
     }
 
@@ -171,7 +212,41 @@ namespace Inceptum.Cqrs.Tests
                 var eventListener = container.Resolve<EventListener>();
                 cqrsEngine.Contexts.First(c => c.Name == "local").EventDispatcher.Dispatch("remote", "test", (delay, acknowledge) => { });
                 Assert.That(eventListener.EventsWithBoundedContext, Is.EquivalentTo(new[] { Tuple.Create("test", "remote") }), "Event was not dispatched");
-                Assert.That(eventListener.Events, Is.EquivalentTo(new[] { "test" }), "Event was not dispatched");
+            }
+        }
+
+        [Test]
+        public void ProjectionWiringBatchTest()
+        {
+            using (var container = new WindsorContainer())
+            {
+                container.Register(Component.For<IMessagingEngine>().Instance(MockRepository.GenerateMock<IMessagingEngine>()))
+                    .AddFacility<CqrsFacility>(f => f.RunInMemory().Contexts(
+                            Register.BoundedContext("local").ListeningEvents(typeof(string)).From("remote").On("remoteEVents")
+                            ))
+                    .Register(Component.For<EventListenerWithBatchSupport>()
+                    .AsProjection("local", "remote", 
+                            batchSize:2,
+                            applyTimeoutInSeconds: 0,
+                            beforeBatchApply:listener => listener.CreateDbSession(), 
+                            afterBatchApply: (listener, sbSession) => sbSession.Commit()))
+                    .Resolve<ICqrsEngineBootstrapper>().Start();
+
+                var cqrsEngine = (CqrsEngine)container.Resolve<ICqrsEngine>();
+                var eventListener = container.Resolve<EventListenerWithBatchSupport>();
+                var eventDispatcher = cqrsEngine.Contexts.First(c => c.Name == "local").EventDispatcher;
+                eventDispatcher.Dispatch("remote", "event1", (delay, acknowledge) => { });
+                eventDispatcher.Dispatch("remote", "event2", (delay, acknowledge) => { });
+                eventDispatcher.Dispatch("remote", "event3", (delay, acknowledge) => { });
+                eventDispatcher.Dispatch("remote", "event4", (delay, acknowledge) => { });
+
+                Assert.That(eventListener.Events, Is.EquivalentTo(new[] { "event1", "event2", "event3", "event4" }), "Event was not dispatched");
+                Assert.That(eventListener.Sessions.Any(), Is.True, "Batch start callback was not called");
+                Assert.That(eventListener.Sessions.Count, Is.EqualTo(2), "Event were not dispatched in batches");
+                Assert.That(eventListener.Sessions[0].Events, Is.EquivalentTo(new[] { "event1", "event2"}), "Wrong events in batch");
+                Assert.That(eventListener.Sessions[1].Events, Is.EquivalentTo(new[] { "event3", "event4" }), "Wrong events in batch");
+                Assert.That(eventListener.Sessions[0].Commited, Is.True, "Batch applied callback was not called");
+                Assert.That(eventListener.Sessions[1].Commited, Is.True, "Batch applied callback was not called");
             }
         }
 

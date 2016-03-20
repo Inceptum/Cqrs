@@ -120,40 +120,69 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
             return this;
         }
 
-     
+        public IBoundedContextRegistration WithProjection<TProjection, TBatchContext>(TProjection projection, string fromBoundContext, int batchSize = 0,
+            int applyTimeoutInSeconds = 0, Func<TProjection, TBatchContext> beforeBatchApply = null, Action<TProjection, TBatchContext> afterBatchApply = null)
+        {
+            RegisterProjections(projection, fromBoundContext, batchSize, applyTimeoutInSeconds,
+               beforeBatchApply, afterBatchApply);
+            return this;
+        }
 
-        public IBoundedContextRegistration WithProjection<TProjection>(TProjection projection, string fromBoundContext
+        public IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0,
+            Type batchContextType = null, Func<object, object> beforeBatchApply = null, Action<object, object> afterBatchApply = null)
+        {
+      
+            RegisterProjections(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, batchContextType, beforeBatchApply, afterBatchApply);
+            return this;
+        }
+
+        public IBoundedContextRegistration WithProjection(object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0,
+            Type batchContextType = null, Func<object, object> beforeBatchApply = null, Action<object, object> afterBatchApply = null)
+        {
+            RegisterProjections(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, batchContextType, beforeBatchApply, afterBatchApply);
+            return this;
+        }
+
+
+        public IBoundedContextRegistration WithProjection<TProjection, TBatchContext>(string fromBoundContext 
             , int batchSize = 0, int applyTimeoutInSeconds = 0
-            , Action<TProjection> beforeBatchApply=null, Action<TProjection> afterBatchApply=null)
+            , Func<TProjection, TBatchContext> beforeBatchApply = null, Action<TProjection, TBatchContext> afterBatchApply = null)
         {
-            RegisterProjections(projection, fromBoundContext, batchSize, applyTimeoutInSeconds,beforeBatchApply,afterBatchApply);
+            Func<object, object> beforeBatchApply_ = (beforeBatchApply == null)
+              ? (Func<object, object>)null
+              : o => beforeBatchApply((TProjection)o);
+            Action<object, object> afterBatchApply_ = (afterBatchApply == null)
+                ? (Action<object, object>)null
+                : (o, c) => afterBatchApply((TProjection)o, (TBatchContext)c);
+
+            RegisterProjections(typeof(TProjection), fromBoundContext, batchSize, applyTimeoutInSeconds,typeof(TBatchContext), beforeBatchApply_, afterBatchApply_);
             return this;
         }
 
-        public IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<object> beforeBatchApply = null, Action<object> afterBatchApply = null)
-        {
-            RegisterProjections(projection, fromBoundContext,   batchSize = 0,   applyTimeoutInSeconds = 0);
-            return this;
-        }
-
-        public IBoundedContextRegistration WithProjection<TProjection>(string fromBoundContext 
-            , int batchSize = 0, int applyTimeoutInSeconds = 0
-            , Action<TProjection> beforeBatchApply = null, Action<TProjection> afterBatchApply = null)
-        {
-            RegisterProjections(typeof(TProjection), fromBoundContext);
-            return this;
-        }
-
-        protected void RegisterProjections<TProjection>(TProjection projection, string fromBoundContext, int batchSize, int applyTimeoutInSeconds, Action<TProjection> beforeBatchApply, Action<TProjection> afterBatchApply)
+        protected void RegisterProjections<TProjection, TBatchContext>(TProjection projection, string fromBoundContext, int batchSize, int applyTimeoutInSeconds,
+            Func<TProjection, TBatchContext> beforeBatchApply, Action<TProjection, TBatchContext> afterBatchApply)
         {
             if (projection == null) throw new ArgumentNullException("projection");
-            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, o => beforeBatchApply((TProjection)o), o => afterBatchApply((TProjection)o)));
+            Func<object, object> beforeBatchApply_ = (beforeBatchApply == null) 
+                ? (Func<object, object>)null 
+                : o => beforeBatchApply((TProjection)o);
+            Action<object,object> afterBatchApply_ = (afterBatchApply == null) 
+                ? (Action<object,object>)null 
+                : (o,c) => afterBatchApply((TProjection)o,(TBatchContext)c);
+
+            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply_, afterBatchApply_,typeof(TBatchContext)));
         }
 
-        protected void RegisterProjections(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<object> beforeBatchApply = null, Action<object> afterBatchApply = null)
+        protected void RegisterProjections(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Type batchContextType=null, Func<object, object> beforeBatchApply = null, Action<object, object> afterBatchApply = null)
         {
             if (projection == null) throw new ArgumentNullException("projection");
-            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext, batchSize, applyTimeoutInSeconds,beforeBatchApply,afterBatchApply));
+            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply, afterBatchApply, batchContextType));
+        }
+
+       protected void RegisterProjections(object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Type batchContextType=null, Func<object, object> beforeBatchApply = null, Action<object, object> afterBatchApply = null)
+        {
+            if (projection == null) throw new ArgumentNullException("projection");
+            AddDescriptor(new ProjectionDescriptor(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply, afterBatchApply, batchContextType));
         }
 
         public IBoundedContextRegistration WithProcess(object process)

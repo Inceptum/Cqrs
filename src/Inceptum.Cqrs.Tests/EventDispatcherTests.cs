@@ -11,12 +11,43 @@ using NUnit.Framework;
 
 namespace Inceptum.Cqrs.Tests
 {
+    class FakeBatchContext
+    {
+        
+    }
+
+    class EventHandlerWithBatchSupport 
+    {
+        public readonly Dictionary<object, object> HandledEvents = new Dictionary<object, object>();
+        public void Handle(DateTime e, FakeBatchContext batchContext)
+        {
+            HandledEvents.Add(e, batchContext);
+        }
+        public FakeBatchContext OnBatchStart()
+        {
+            BatchStartReported = true;
+            LastCreatedBatchContext = new FakeBatchContext();
+            return LastCreatedBatchContext;
+        }
+
+        public FakeBatchContext LastCreatedBatchContext { get; set; }
+        public bool BatchStartReported { get; set; }
+        public bool BatchFinishReported { get; set; }
+
+
+        public void OnBatchFinish(FakeBatchContext context)
+        {
+            BatchFinishReported = true;
+        }
+    } 
+    
     class EventHandler 
     {
         public EventHandler(bool fail = false)
         {
             m_Fail = fail;
         }
+         
 
         public readonly List<object> HandledEvents=new List<object>();
         private  bool m_Fail;
@@ -37,16 +68,9 @@ namespace Inceptum.Cqrs.Tests
                 FailOnce = false;
                 throw new Exception();
             }
-        }        
+        }       
         
-        
-    /*    public void Handle(int e)
-        {
-            HandledEvents.Add(e);
-            if (m_Fail)
-                throw new Exception();
-        }       */    
-
+  
 
         public CommandHandlingResult[] Handle(int[] e)
         {
@@ -63,19 +87,7 @@ namespace Inceptum.Cqrs.Tests
             return new CommandHandlingResult(){Retry = true,RetryDelay = 100};
         }
 
-        public void OnBatchStart()
-        {
-            BatchStartReported = true;
-        }
-
-        public bool BatchStartReported { get; set; }
-        public bool BatchFinishReported { get; set; }
-
-
-        public void OnBatchFinish()
-        {
-            BatchFinishReported = true;
-        }
+     
     }   
     
 
@@ -162,45 +174,49 @@ namespace Inceptum.Cqrs.Tests
         public void BatchDispatchTriggeringBySizeTest()
         {
             var dispatcher = new EventDispatcher("testBC");
-            var handler = new EventHandler();
-            dispatcher.Wire("testBC", handler, 3, 1000000, h => ((EventHandler)h).OnBatchStart(), h => ((EventHandler)h).OnBatchFinish());
+            var handler = new EventHandlerWithBatchSupport();
+            dispatcher.Wire("testBC", handler, 3, 1000000, 
+                typeof(FakeBatchContext),
+                h => ((EventHandlerWithBatchSupport)h).OnBatchStart(),
+                (h, c) => ((EventHandlerWithBatchSupport)h).OnBatchFinish((FakeBatchContext)c));
             Tuple<long, bool> result = null;
-            handler.FailOnce = false;
             dispatcher.Dispatch("testBC", new[]
             {
-                Tuple.Create<object,AcknowledgeDelegate>("a", (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
-                Tuple.Create<object,AcknowledgeDelegate>("b", (delay, acknowledge) => { }),
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,1), (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,2), (delay, acknowledge) => { }),
             });
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(0), "Events were delivered before batch is filled");
             dispatcher.Dispatch("testBC", new[]
             {
-                Tuple.Create<object,AcknowledgeDelegate>("с", (delay, acknowledge) => { })
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,3), (delay, acknowledge) => { })
             });
             Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "Not all events were delivered");
             Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
             Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
+            Assert.That(handler.HandledEvents.Values,Is.EqualTo(new object[]{handler.LastCreatedBatchContext,handler.LastCreatedBatchContext,handler.LastCreatedBatchContext}),"Batch context was not the same for all evants in the batch");
         }
 
         [Test]
         public void BatchDispatchTriggeringByTimeoutTest()
         {
             var dispatcher = new EventDispatcher("testBC");
-            var handler = new EventHandler();
-            dispatcher.Wire("testBC", handler, 3, 1, h => ((EventHandler)h).OnBatchStart(), h =>((EventHandler)h).OnBatchFinish());
+            var handler = new EventHandlerWithBatchSupport();
+            dispatcher.Wire("testBC", handler, 3, 1, typeof(FakeBatchContext), h => ((EventHandlerWithBatchSupport)h).OnBatchStart(), (h, c) => ((EventHandlerWithBatchSupport)h).OnBatchFinish((FakeBatchContext)c));
             Tuple<long, bool> result = null;
-            handler.FailOnce = false;
             dispatcher.Dispatch("testBC", new[]
             {
-                Tuple.Create<object,AcknowledgeDelegate>("a", (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
-                Tuple.Create<object,AcknowledgeDelegate>("b", (delay, acknowledge) => { })
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,1), (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,2), (delay, acknowledge) => { })
             });
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(0), "Events were delivered before batch apply timeoout");
-            Thread.Sleep(2000);
+            Thread.Sleep(5000);
             Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(2), "Not all events were delivered");
             Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
             Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
+            Assert.That(handler.HandledEvents.Values, Is.EqualTo(new object[] { handler.LastCreatedBatchContext,  handler.LastCreatedBatchContext }), "Batch context was not the same for all evants in the batch");
+
         }
     }
 }

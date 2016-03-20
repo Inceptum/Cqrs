@@ -28,9 +28,10 @@ namespace Inceptum.Cqrs.Configuration.BoundedContext
         IBoundedContextRegistration WithCommandsHandler(Type handler);
 
 
-        IBoundedContextRegistration WithProjection<TProjection>(TProjection projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<TProjection> beforeBatchApply = null, Action<TProjection> afterBatchApply = null);
-        IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<object> beforeBatchApply = null, Action<object> afterBatchApply = null);
-        IBoundedContextRegistration WithProjection<TProjection>(string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<TProjection> beforeBatchApply = null, Action<TProjection> afterBatchApply = null);
+        IBoundedContextRegistration WithProjection<TProjection, TBatchContext>(TProjection projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Func<TProjection, TBatchContext> beforeBatchApply = null, Action<TProjection, TBatchContext> afterBatchApply = null);
+        IBoundedContextRegistration WithProjection(Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Type batchContextType = null, Func<object, object> beforeBatchApply = null, Action<object, object> afterBatchApply = null);
+        IBoundedContextRegistration WithProjection(object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Type batchContextType = null, Func<object, object> beforeBatchApply = null, Action<object, object> afterBatchApply = null);
+        IBoundedContextRegistration WithProjection<TProjection, TBatchContext>(string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Func<TProjection, TBatchContext> beforeBatchApply = null, Action<TProjection, TBatchContext> afterBatchApply = null);
 
 
         IBoundedContextRegistration WithEventStore<T>() where T : IEventStoreAdapter;

@@ -156,17 +156,22 @@ namespace Inceptum.Cqrs.Configuration
 
 
 
-        public static IBoundedContextRegistration WithProjection<T>(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, T projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<T> beforeBatchApply = null, Action<T> afterBatchApply = null)
+        public static IBoundedContextRegistration WithProjection<TProjection, TBatchContext>(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, TProjection projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Func<TProjection, TBatchContext> beforeBatchApply = null, Action<TProjection, TBatchContext> afterBatchApply = null)
         {
             return wrapper.Registration.WithProjection(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply, afterBatchApply);
         }
 
-        public static IBoundedContextRegistration WithProjection(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<object> beforeBatchApply = null, Action<object> afterBatchApply = null)
+        public static IBoundedContextRegistration WithProjection(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, Type projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Type batchContextType=null,Func<object,object> beforeBatchApply = null, Action<object,object> afterBatchApply = null)
         {
-            return wrapper.Registration.WithProjection(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply, afterBatchApply);
+            return wrapper.Registration.WithProjection(projection, fromBoundContext, batchSize, applyTimeoutInSeconds, batchContextType, beforeBatchApply, afterBatchApply);
         }
 
-        public static IBoundedContextRegistration WithProjection<T>(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Action<T> beforeBatchApply = null, Action<T> afterBatchApply = null)
+        public static IBoundedContextRegistration WithProjection(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, object projection, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0)
+        {
+            return wrapper.Registration.WithProjection<object,object>(projection, fromBoundContext, batchSize, applyTimeoutInSeconds);
+        }
+
+        public static IBoundedContextRegistration WithProjection<TProjection, TBatchContext>(this IRegistrationWrapper<IBoundedContextRegistration> wrapper, string fromBoundContext, int batchSize = 0, int applyTimeoutInSeconds = 0, Func<TProjection, TBatchContext> beforeBatchApply = null, Action<TProjection, TBatchContext> afterBatchApply = null)
         {
             return wrapper.Registration.WithProjection(fromBoundContext, batchSize, applyTimeoutInSeconds, beforeBatchApply, afterBatchApply);
         }
