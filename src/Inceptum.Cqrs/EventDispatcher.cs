@@ -171,9 +171,11 @@ namespace Inceptum.Cqrs
 
         public void Wire(string fromBoundedContext, object o, int batchSize, int applyTimeoutInSeconds,Type batchContextType,  Func<object, object> beforeBatchApply, Action<object, object> afterBatchApply, params OptionalParameter[] parameters)
         {
+            Func<object> beforeBatchApplyWrap = beforeBatchApply == null ? (Func<object>)null : () => beforeBatchApply(o);
+            Action<object> afterBatchApplyWrap = afterBatchApply == null ? (Action<object>)null : c => afterBatchApply(o, c); 
             var batchManager = batchSize==0 && applyTimeoutInSeconds==0
                 ?null
-                : new BatchManager(m_FailedEventRetryDelay, m_Logger, batchSize, applyTimeoutInSeconds*1000, ()=>beforeBatchApply(o), (c) => afterBatchApply(o,c));
+                : new BatchManager(m_FailedEventRetryDelay, m_Logger, batchSize, applyTimeoutInSeconds * 1000, beforeBatchApplyWrap, afterBatchApplyWrap);
             wire(fromBoundedContext, o, batchManager,batchContextType,parameters);
         }
 

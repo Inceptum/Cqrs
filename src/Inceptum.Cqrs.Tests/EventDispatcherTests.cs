@@ -175,7 +175,7 @@ namespace Inceptum.Cqrs.Tests
         {
             var dispatcher = new EventDispatcher("testBC");
             var handler = new EventHandlerWithBatchSupport();
-            dispatcher.Wire("testBC", handler, 3, 1000000, 
+            dispatcher.Wire("testBC", handler, 3, 0, 
                 typeof(FakeBatchContext),
                 h => ((EventHandlerWithBatchSupport)h).OnBatchStart(),
                 (h, c) => ((EventHandlerWithBatchSupport)h).OnBatchFinish((FakeBatchContext)c));
@@ -210,7 +210,7 @@ namespace Inceptum.Cqrs.Tests
                 Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,2), (delay, acknowledge) => { })
             });
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(0), "Events were delivered before batch apply timeoout");
-            Thread.Sleep(5000);
+            Thread.Sleep(2000);
             Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(2), "Not all events were delivered");
             Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
