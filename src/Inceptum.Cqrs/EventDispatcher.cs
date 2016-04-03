@@ -394,14 +394,6 @@ namespace Inceptum.Cqrs
                 var handlers = grouping.Select(h=>h.Item1).ToArray();
                 batchManager.Handle(handlers, events,origin);
             }
-/*
-            foreach (var handler in list)
-            {
-                var batchManager = handler.Item2;
-                batchManager.Handle(handler.Item1, events,origin);
-
-            }*/
-            
         }
 
 

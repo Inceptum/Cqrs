@@ -19,9 +19,17 @@ namespace Inceptum.Cqrs.Tests
     class EventHandlerWithBatchSupport 
     {
         public readonly Dictionary<object, object> HandledEvents = new Dictionary<object, object>();
-        public void Handle(DateTime e, FakeBatchContext batchContext)
+        private int m_FailCount;
+
+        public EventHandlerWithBatchSupport(int failCount=0)
+        {
+            m_FailCount = failCount;
+        }
+
+        public CommandHandlingResult Handle(DateTime e, FakeBatchContext batchContext)
         {
             HandledEvents.Add(e, batchContext);
+            return new CommandHandlingResult() {Retry = Interlocked.Decrement(ref m_FailCount) >= 0, RetryDelay = 10};
         }
         public FakeBatchContext OnBatchStart()
         {
@@ -217,6 +225,36 @@ namespace Inceptum.Cqrs.Tests
             Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
             Assert.That(handler.HandledEvents.Values, Is.EqualTo(new object[] { handler.LastCreatedBatchContext,  handler.LastCreatedBatchContext }), "Batch context was not the same for all evants in the batch");
 
+        }
+
+
+        [Test]
+        public void BatchDispatchUnackTest()
+        {
+            var dispatcher = new EventDispatcher("testBC");
+            var handler = new EventHandlerWithBatchSupport(1);
+            dispatcher.Wire("testBC", handler, 3, 0,
+                typeof(FakeBatchContext),
+                h => ((EventHandlerWithBatchSupport)h).OnBatchStart(),
+                (h, c) => ((EventHandlerWithBatchSupport)h).OnBatchFinish((FakeBatchContext)c));
+            Tuple<long, bool> result = null;
+            dispatcher.Dispatch("testBC", new[]
+            {
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,1), (delay, acknowledge) => {result = Tuple.Create(delay, acknowledge);  }),
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,2), (delay, acknowledge) => { }),
+            });
+            Assert.That(handler.HandledEvents.Count, Is.EqualTo(0), "Events were delivered before batch is filled");
+            dispatcher.Dispatch("testBC", new[]
+            {
+                Tuple.Create<object,AcknowledgeDelegate>(new DateTime(2016,3,3), (delay, acknowledge) => { })
+            });
+            Assert.That(handler.HandledEvents.Count, Is.Not.EqualTo(0), "Events were not delivered after batch is filled");
+            Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "Not all events were delivered");
+            Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
+            Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
+            Assert.That(handler.HandledEvents.Values, Is.EqualTo(new object[] { handler.LastCreatedBatchContext, handler.LastCreatedBatchContext, handler.LastCreatedBatchContext }), "Batch context was not the same for all evants in the batch");
+            Assert.That(result.Item2, Is.False,"failed event was acked");
+            Assert.That(result.Item1, Is.EqualTo(10),"failed event retry timeout was wrong");
         }
     }
 }
