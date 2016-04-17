@@ -11,41 +11,39 @@ namespace Inceptum.Cqrs
     {
         private readonly Action<long> m_Callback;
         private long m_Counter;
-        public Guid Id { get; set; }
-        public int BatchSize { get; private set; }
-        List<Tuple<object, AcknowledgeDelegate>> m_Events=new List<Tuple<object, AcknowledgeDelegate>>(); 
+        private long m_ExpectedCount=-1;
+        public Guid Id { get; private set; }
+
         public long Counter
         {
             get { return m_Counter; }
             set { m_Counter = value; }
         }
 
-        public ReplayFinishedEvent FinishedEvent { get; set; }
-        public AcknowledgeDelegate FinishedEventAcknowledge { get; set; }
+        private AcknowledgeDelegate FinishedEventAcknowledge { get; set; }
 
-        public Replay(Guid id, Action<long> callback, int batchSize)
+        public Replay(Guid id, Action<long> callback)
         {
             m_Callback = callback;
             Id = id;
-            BatchSize = batchSize;
         }
+ 
 
-        public long Increment()
+        internal bool ReportReplayFinishedIfRequired(Logger logger,bool incrementCounter , AcknowledgeDelegate finishedEventAcknowledge=null, ReplayFinishedEvent finishedEvent = null)
         {
-            return Interlocked.Increment(ref m_Counter);
-        }
+            if (finishedEvent != null)
+                m_ExpectedCount = finishedEvent.EventsCount;
+            if (incrementCounter)
+                Interlocked.Increment(ref m_Counter);
 
-
-        internal bool ReportReplayFinishedIfRequired(Logger logger)
-        {
-            if (FinishedEvent == null || FinishedEvent.EventsCount != Counter)
-                return false;
-
+            FinishedEventAcknowledge = finishedEventAcknowledge ?? FinishedEventAcknowledge;
             if (FinishedEventAcknowledge == null)
-                return true;
+                return false;
 
             try
             {
+                if (m_ExpectedCount != Counter)
+                    return false;
                 m_Callback(Counter);
                 FinishedEventAcknowledge(0, true);
                 return true;
@@ -56,35 +54,6 @@ namespace Inceptum.Cqrs
                 FinishedEventAcknowledge(60000, false);
                 return false;
             }
-        }
-
-        public IEnumerable<Tuple<object, AcknowledgeDelegate>> GetEventsToDispatch(object @event, AcknowledgeDelegate acknowledge)
-        {
-            var replayFinishedEvent = @event as ReplayFinishedEvent;
-            if (replayFinishedEvent!=null)
-            {
-                 FinishedEvent = (ReplayFinishedEvent) @event ;
-                 FinishedEventAcknowledge = acknowledge;
-                if(BatchSize <= 1)
-                    return new Tuple<object, AcknowledgeDelegate>[0];
-            }
-            
-            var tuple = Tuple.Create(@event, acknowledge);
-            if (BatchSize <= 1)
-            {
-                return new[] {tuple};
-            }
-
-            if (replayFinishedEvent== null)
-                m_Events.Add(tuple);
-
-            if (m_Events.Count >= BatchSize || FinishedEvent!=null)
-            {
-                var r = m_Events.ToArray();
-                m_Events.Clear();
-                return r;
-            }
-            return new Tuple<object, AcknowledgeDelegate>[0];
         }
     }
 }

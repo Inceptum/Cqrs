@@ -6,8 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Castle.Components.DictionaryAdapter;
 using Inceptum.Cqrs.Configuration;
+using Inceptum.Messaging;
+using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
+using Inceptum.Messaging.RabbitMq;
 using NUnit.Framework;
+using Rhino.Mocks;
 
 namespace Inceptum.Cqrs.Tests
 {
@@ -18,7 +22,7 @@ namespace Inceptum.Cqrs.Tests
 
     class EventHandlerWithBatchSupport 
     {
-        public readonly Dictionary<object, object> HandledEvents = new Dictionary<object, object>();
+        public readonly List<Tuple<object, object>> HandledEvents = new List<Tuple<object, object>>();
         private int m_FailCount;
 
         public EventHandlerWithBatchSupport(int failCount=0)
@@ -28,9 +32,13 @@ namespace Inceptum.Cqrs.Tests
 
         public CommandHandlingResult Handle(DateTime e, FakeBatchContext batchContext)
         {
-            HandledEvents.Add(e, batchContext);
-            return new CommandHandlingResult() {Retry = Interlocked.Decrement(ref m_FailCount) >= 0, RetryDelay = 10};
+            HandledEvents.Add(Tuple.Create<object, object>(e, batchContext));
+            var retry = Interlocked.Decrement(ref m_FailCount) >= 0;
+            Console.WriteLine("Retry {0}",retry);
+            return new CommandHandlingResult() {Retry = retry, RetryDelay = 10};
         }
+
+     
         public FakeBatchContext OnBatchStart()
         {
             BatchStartReported = true;
@@ -202,7 +210,7 @@ namespace Inceptum.Cqrs.Tests
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "Not all events were delivered");
             Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
             Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
-            Assert.That(handler.HandledEvents.Values,Is.EqualTo(new object[]{handler.LastCreatedBatchContext,handler.LastCreatedBatchContext,handler.LastCreatedBatchContext}),"Batch context was not the same for all evants in the batch");
+            Assert.That(handler.HandledEvents.Select(t=>t.Item2),Is.EqualTo(new object[]{handler.LastCreatedBatchContext,handler.LastCreatedBatchContext,handler.LastCreatedBatchContext}),"Batch context was not the same for all evants in the batch");
         }
 
         [Test]
@@ -223,7 +231,7 @@ namespace Inceptum.Cqrs.Tests
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(2), "Not all events were delivered");
             Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
             Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
-            Assert.That(handler.HandledEvents.Values, Is.EqualTo(new object[] { handler.LastCreatedBatchContext,  handler.LastCreatedBatchContext }), "Batch context was not the same for all evants in the batch");
+            Assert.That(handler.HandledEvents.Select(t => t.Item2), Is.EqualTo(new object[] { handler.LastCreatedBatchContext,  handler.LastCreatedBatchContext }), "Batch context was not the same for all evants in the batch");
 
         }
 
@@ -252,9 +260,46 @@ namespace Inceptum.Cqrs.Tests
             Assert.That(handler.HandledEvents.Count, Is.EqualTo(3), "Not all events were delivered");
             Assert.That(handler.BatchStartReported, Is.True, "Batch start callback was not called");
             Assert.That(handler.BatchFinishReported, Is.True, "Batch after apply  callback was not called");
-            Assert.That(handler.HandledEvents.Values, Is.EqualTo(new object[] { handler.LastCreatedBatchContext, handler.LastCreatedBatchContext, handler.LastCreatedBatchContext }), "Batch context was not the same for all evants in the batch");
+            Assert.That(handler.HandledEvents.Select(t => t.Item2), Is.EqualTo(new object[] { handler.LastCreatedBatchContext, handler.LastCreatedBatchContext, handler.LastCreatedBatchContext }), "Batch context was not the same for all evants in the batch");
             Assert.That(result.Item2, Is.False,"failed event was acked");
             Assert.That(result.Item1, Is.EqualTo(10),"failed event retry timeout was wrong");
+        }
+
+        [Test]
+        public void BatchDispatchUnackRmqTest()
+        {
+            var handler = new EventHandlerWithBatchSupport(1);
+            var endpointProvider = MockRepository.GenerateMock<IEndpointProvider>();
+           
+
+            using (
+                var messagingEngine =
+                    new MessagingEngine(
+                        new TransportResolver(new Dictionary<string, TransportInfo>
+                            {
+                                {"RabbitMq", new TransportInfo("amqp://localhost", "guest", "guest", null, "RabbitMq")}
+                            }), new RabbitMqTransportFactory()))
+            {
+                var tmpQueue = messagingEngine.CreateTemporaryDestination("RabbitMq",null);
+           
+                var endpoint = new Endpoint("RabbitMq", "testExchange" , "testQueue", true, "json");
+                endpointProvider.Expect(r => r.Get("route")).Return(endpoint);
+                endpointProvider.Expect(r => r.Contains("route")).Return(true);
+
+                using (var engine = new CqrsEngine(new DefaultDependencyResolver(),messagingEngine, endpointProvider,false,
+                                                   Register.BoundedContext("bc").ListeningEvents(typeof(DateTime)).From("other").On("route")
+                                                   .WithProjection(handler, "other",1,0,
+                                                                   h => ((EventHandlerWithBatchSupport)h).OnBatchStart(),
+                                                                   (h, c) => ((EventHandlerWithBatchSupport)h).OnBatchFinish((FakeBatchContext)c)
+                                                                   )
+                                                   )
+                    )
+                {
+                    
+                    messagingEngine.Send(DateTime.Now, endpoint);
+                    Thread.Sleep(20000);
+                }
+            }
         }
     }
 }

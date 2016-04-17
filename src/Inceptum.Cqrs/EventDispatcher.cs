@@ -405,14 +405,15 @@ namespace Inceptum.Cqrs
 
             if (headers.ContainsKey("CommandId"))
             {
-                var commandId = Guid.Parse(headers["CommandId"]);
-                replay = findReplay(commandId);
+                Guid commandId;
+                if(Guid.TryParse(headers["CommandId"],out commandId))
+                    replay = findReplay(commandId);
             }
             else
             {
                 m_Logger.Warn("Bounded context '{0}' uses obsolete Inceptum.Cqrs version. Callback would be never invoked.",remoteBoundedContext);
             }
-            IEnumerable<Tuple<object, AcknowledgeDelegate>> eventsToDispatch;
+
             var replayFinishedEvent = @event as ReplayFinishedEvent;
             if (replayFinishedEvent != null )
             {
@@ -424,46 +425,43 @@ namespace Inceptum.Cqrs
 
                 lock (replay)
                 {
-                    eventsToDispatch = replay.GetEventsToDispatch(replayFinishedEvent, acknowledge);
+                    if (!replay.ReportReplayFinishedIfRequired(m_Logger,false, acknowledge, replayFinishedEvent))
+                        return;
 
-                    if (replay.ReportReplayFinishedIfRequired(m_Logger))
+                    lock (m_Replays)
                     {
-                        lock (m_Replays)
-                        {
-                            m_Replays.Remove(replay.Id);
-                        }
+                        m_Replays.Remove(replay.Id);
                     }
                 }
-
             }
             else if (replay != null)
             {
                 lock (replay)
                 {
-                    eventsToDispatch = replay.GetEventsToDispatch(@event, (delay, doAcknowledge) =>
+
+                    Dispatch(remoteBoundedContext, new []
                     {
-                        acknowledge(delay, doAcknowledge);
-
-                        if (doAcknowledge)
-                            replay.Increment();
-
-                        if (replay.ReportReplayFinishedIfRequired(m_Logger))
+                        Tuple.Create<object,AcknowledgeDelegate>(@event, (delay, doAcknowledge) =>
                         {
+                            acknowledge(delay, doAcknowledge);
+
+                            if (!doAcknowledge || !replay.ReportReplayFinishedIfRequired(m_Logger,true))
+                                return;
+
                             lock (m_Replays)
                             {
                                 m_Replays.Remove(replay.Id);
                             }
-                        }
-
+                        })
                     });
+ 
                 }
             }
             else
             {
-                eventsToDispatch = new[] {Tuple.Create(@event, acknowledge)};
+                    Dispatch(remoteBoundedContext, new[] {Tuple.Create(@event, acknowledge)});
             }
-
-            Dispatch(remoteBoundedContext, eventsToDispatch);
+             
         }
 
         private Replay findReplay(Guid replayId)
@@ -479,13 +477,13 @@ namespace Inceptum.Cqrs
             return replay;
         }
 
-        public void RegisterReplay(Guid id, Action<long> callback,int batchSize)
+        public void RegisterReplay(Guid id, Action<long> callback)
         {
             lock (m_Replays)
             {
                 if (m_Replays.ContainsKey(id))
                     throw new InvalidOperationException(string.Format("Replay with id {0} is already in pogress", id));
-                var replay = new Replay(id, callback, batchSize);
+                var replay = new Replay(id, callback);
                 m_Replays[id] = replay;
             }
 
