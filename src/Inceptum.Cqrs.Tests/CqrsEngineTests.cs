@@ -733,7 +733,7 @@ namespace Inceptum.Cqrs.Tests
             Assert.That(eventsListener.Handled.Count, Is.EqualTo(3 + expectedReplayCount), "Wrong number of events was replayed");
         }
 
-        [Test,Ignore]
+        [Test]
         public void ReplayEventsShouldConsiderEventUpconversionTest()
         {
             var eventsListener = new EventsListener();

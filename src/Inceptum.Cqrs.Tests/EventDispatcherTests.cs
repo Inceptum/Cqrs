@@ -265,7 +265,7 @@ namespace Inceptum.Cqrs.Tests
             Assert.That(result.Item1, Is.EqualTo(10),"failed event retry timeout was wrong");
         }
 
-        [Test]
+        [Test, Ignore]
         public void BatchDispatchUnackRmqTest()
         {
             var handler = new EventHandlerWithBatchSupport(1);
